@@ -85,6 +85,7 @@ const questions = {
     budget: "งบค่าเช่าสูงสุดต่อเดือนประมาณกี่บาทครับ?",
     transport: "ปกติเดินทางด้วยอะไรเป็นหลักครับ เช่น BTS/MRT รถยนต์ มอเตอร์ไซค์ หรือเดิน?",
     lifestyleInvite: "ถ้ามีอะไรที่อยากให้อยู่ใกล้บ้านเป็นพิเศษ เช่น สวนไว้ไปวิ่ง ยิมที่ไปประจำ หรือตลาด ก็บอกได้เลยครับ",
+    confirmSearch: "ข้อมูลพร้อมแล้วครับ พร้อมให้เริ่มค้นหาย่านไหมครับ? พิมพ์ “ค้นหา” เพื่อเริ่ม หรือบอกข้อมูลที่อยากแก้ไขได้เลย",
     ready: "บันทึกความต้องการที่พักของคุณแล้วครับ",
   },
   en: {
@@ -92,6 +93,7 @@ const questions = {
     budget: "What's your maximum monthly rent in Thai baht?",
     transport: "How do you usually get around, for example BTS/MRT, car, motorcycle, or walking?",
     lifestyleInvite: "If there’s anything you’d like close to home, like a park for running, your regular gym, or a market, feel free to mention it too.",
+    confirmSearch: "Ready to start searching for neighborhoods? Reply “search” to start, or tell me what you’d like to change.",
     ready: "I’ve saved your housing preferences.",
   },
 };
@@ -126,7 +128,7 @@ export function evaluateConversation(output: unknown, previousProfile?: unknown)
     categories: profile.categories.map((item) => ({ ...item, places: normalizeCategoryLocations(item.places) })),
   };
   const copy = questions[language];
-  let question: string | null = null;
+  let question = copy.confirmSearch;
   if (!fields.destination) question = copy.destination;
   else if (!fields.maxMonthlyRent) question = copy.budget;
   else if (!fields.primaryTransport) {
@@ -134,7 +136,7 @@ export function evaluateConversation(output: unknown, previousProfile?: unknown)
       || Object.values(fields.lifestyle).some((value) => value !== null);
     question = hasLifestyle ? copy.transport : `${copy.transport}\n${copy.lifestyleInvite}`;
   }
-  return { profile: toProfile(fields, language, withAnchor(fields, previousProfile)), ready: question === null, question, reply: question ?? copy.ready };
+  return { profile: toProfile(fields, language, withAnchor(fields, previousProfile)), ready: false, question, reply: question };
 }
 
 // Recognize weight prompts saved before weights became optional.
@@ -162,15 +164,30 @@ export function pendingWeightCategories(profile: unknown, question: string | nul
   return question === weightQuestion(saved.data.categories, saved.data.language) ? saved.data.categories : null;
 }
 
+const savedSearchProfile = z.looseObject({
+  language: z.enum(["th", "en"]),
+  destinations: z.array(z.looseObject({ name: profileFields.shape.destination.unwrap() })).min(1),
+  budget: z.looseObject({ maxMonthlyRent: profileFields.shape.maxMonthlyRent.unwrap() }),
+  transport: z.looseObject({ primary: profileFields.shape.primaryTransport.unwrap() }),
+});
+
 export async function processConversation(input: {
   message: string;
   previousProfile: unknown;
   previousQuestion: string | null;
 }) {
-  const confirmed = /^(confirm|ยืนยัน)[.!]?$/i.test(input.message.trim())
+  const message = input.message.trim();
+  if (/^(search|start search|yes|confirm|ค้นหา|เริ่มค้นหา|พร้อม|ยืนยัน)[.!]?$/i.test(message)) {
+    const saved = savedSearchProfile.safeParse(input.previousProfile);
+    if (saved.success && input.previousQuestion === questions[saved.data.language].confirmSearch) {
+      return { profile: saved.data, ready: true, question: null, reply: questions[saved.data.language].ready };
+    }
+  }
+
+  const confirmed = /^(confirm|ยืนยัน)[.!]?$/i.test(message)
     ? pendingWeightCategories(input.previousProfile, input.previousQuestion)
     : null;
-  if (confirmed) {
+  if (confirmed && savedSearchProfile.safeParse(input.previousProfile).success) {
     const previous = input.previousProfile as ReturnType<typeof toProfile>;
     return {
       profile: {
@@ -184,9 +201,9 @@ export async function processConversation(input: {
           places: normalizeCategoryLocations(category.places),
         })),
       },
-      ready: true,
-      question: null,
-      reply: questions[previous.language].ready,
+      ready: false,
+      question: questions[previous.language].confirmSearch,
+      reply: questions[previous.language].confirmSearch,
     };
   }
 

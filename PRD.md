@@ -8,7 +8,7 @@ Choosing where to live in Bangkok requires comparing rent, commute, transit and 
 
 ## 2. Product goal
 
-A user describes their needs in natural Thai or English inside LINE. An AI agent asks only for missing essential details, investigates Bangkok neighborhoods through available tools/data, and explains **three personalized neighborhood recommendations**, with visible trade-offs. Results can be opened in a lightweight LIFF/Next.js page.
+A user describes their needs in natural Thai or English inside LINE. An AI agent asks for missing essential details, waits for the user to confirm before searching, investigates Bangkok neighborhoods through available tools/data, and explains **three personalized neighborhood recommendations**, with visible trade-offs. Results can be opened in a lightweight LIFF/Next.js page.
 
 **Hackathon pitch:** AI is the decision-making orchestrator—not just a chatbot that narrates a fixed ranking.
 
@@ -44,7 +44,7 @@ The web demo at `/recommendations` shows five sample Bangkok zones in a fixed or
 
 1. User sends a free-form LINE message.
 2. Webhook loads PostgreSQL memory by verified LINE user ID. It silently acknowledges messages while that user has an active analysis.
-3. Webhook uses Codex to update preferences. Missing destination, budget, or transport gets a text question with no job. If no lifestyle preference is known, the transport question also invites the user to mention what they want near home. Answering only the transport question is enough; no extra turn or weights required. A newly complete or changed profile queues one `ANALYSIS` job with the profile snapshot and gets a Flex confirmation.
+3. Webhook uses Codex to update preferences. Missing destination, budget, or transport gets a text question with no job. If no lifestyle preference is known, the transport question also invites the user to mention what they want near home. Answering only the transport question is enough to finish the interview; no lifestyle turn or weights required. Once destination, budget, and transport are known, the bot asks for confirmation. An explicit confirmation queues one `ANALYSIS` job with the saved profile snapshot and triggers a Flex push.
 4. Research agent calls neighborhood tools, compares options, and returns structured recommendations.
 5. A deterministic function computes/verifies numerical scores when feature values exist; AI explains trade-offs without fabricating numbers.
 6. LINE sends a Flex summary with an optional LIFF results link.
