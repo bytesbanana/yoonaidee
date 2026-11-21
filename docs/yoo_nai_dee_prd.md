@@ -299,7 +299,13 @@ Progress state stored in `analysis_jobs`; LIFF polls DB through API. Retry uses 
 
 **Associated files:** `yoo_nai_dee_data_dictionary.md`, `yoo_nai_dee_init.sql`.
 
-### Running the LINE intake locally
+### Direct webhook reply test
+
+The webhook currently uses direct reply mode. It verifies LINE's signature and acknowledges one-to-one text messages with a Flex card via the LINE Reply API, using the event's reply token. This mode pauses profile intake and queue creation for new messages.
+
+Set both `LINE_CHANNEL_SECRET` and `LINE_CHANNEL_ACCESS_TOKEN` on the Railway **web** service. Keep the webhook URL at `/api/line/webhook`. An empty verification batch returns HTTP 200. Send a message in a one-to-one OA chat and look for `line.reply.accepted` in the web service logs. A rejected LINE API call logs `line.reply.failed` with its HTTP status.
+
+### Queued intake configuration
 
 The web app and intake worker use `docs/yoo_nai_dee_init.sql` as their shared schema. Apply it to your PostgreSQL database. Copy `.env.example` to `.env` and set `DATABASE_URL`, `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `OPENAI_API_KEY`, and `OPENAI_MODEL` (a Responses model that supports Structured Outputs).
 

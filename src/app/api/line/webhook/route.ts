@@ -1,6 +1,41 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { enqueueTextEvent, textEvent } from "@/lib/line/intake-events";
+import { buildIntakeFlex } from "@/lib/line/intake-flex";
+
+const replyEvent = z.object({
+  type: z.literal("message"),
+  mode: z.literal("active").optional(),
+  webhookEventId: z.string().min(1),
+  replyToken: z.string().min(1),
+  source: z.object({ type: z.literal("user") }),
+  message: z.object({ type: z.literal("text"), text: z.string() }),
+});
+
+async function replyToMessage(event: z.infer<typeof replyEvent>, channelToken: string) {
+  const language = /[ก-๙]/.test(event.message.text) ? "th" : "en";
+  const reply = language === "th" ? "ได้รับข้อความของคุณแล้วครับ" : "I received your message.";
+  const eventId = event.webhookEventId;
+  try {
+    const response = await fetch("https://api.line.me/v2/bot/message/reply", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${channelToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        replyToken: event.replyToken,
+        messages: [buildIntakeFlex({ reply, language, needsClarification: false })],
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      console.error("line.reply.failed", { eventId, httpStatus: response.status });
+      return false;
+    }
+    console.info("line.reply.accepted", { eventId });
+    return true;
+  } catch {
+    console.error("line.reply.failed", { eventId, code: "TRANSPORT_ERROR" });
+    return false;
+  }
+}
 
 export async function POST(request: Request) {
   const secret = process.env.LINE_CHANNEL_SECRET;
@@ -21,30 +56,19 @@ export async function POST(request: Request) {
   }
 
   console.info("line.webhook.accepted", { eventCount: events.length });
-  for (const event of events) {
-    const parsed = textEvent.safeParse(event);
-    if (!parsed.success) continue;
+  const messages = events.flatMap((event) => {
+    const parsed = replyEvent.safeParse(event);
+    return parsed.success ? [parsed.data] : [];
+  });
+  if (!messages.length) return new Response("OK");
 
-    const eventId = parsed.data.webhookEventId;
-    if (!process.env.DATABASE_URL) {
-      console.error("line.webhook.enqueue_failed", { eventId, code: "DATABASE_URL_MISSING" });
-      return new Response("Webhook temporarily unavailable", { status: 503 });
-    }
-    try {
-      const jobId = await enqueueTextEvent(parsed.data);
-      if (jobId) {
-        console.info("line.webhook.queued", { eventId, jobId });
-      } else {
-        console.info("line.webhook.duplicate", { eventId });
-      }
-    } catch (error) {
-      const candidate = error instanceof Error && "code" in error ? error.code : undefined;
-      const code = typeof candidate === "string" && /^[A-Z0-9_]{1,32}$/.test(candidate)
-        ? candidate
-        : "UNKNOWN";
-      console.error("line.webhook.enqueue_failed", { eventId, code });
-      return new Response("Webhook temporarily unavailable", { status: 503 });
-    }
+  const channelToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelToken) {
+    console.error("line.reply.failed", { code: "LINE_CHANNEL_ACCESS_TOKEN_MISSING" });
+    return new Response("Webhook reply unavailable", { status: 503 });
   }
+
+  const replies = await Promise.all(messages.map((event) => replyToMessage(event, channelToken)));
+  if (replies.includes(false)) return new Response("LINE reply failed", { status: 502 });
   return new Response("OK");
 }
