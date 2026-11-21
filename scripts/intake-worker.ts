@@ -189,7 +189,7 @@ async function deliverIntakeMessage() {
   return true;
 }
 
-for (const key of ["DATABASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL", "LINE_CHANNEL_ACCESS_TOKEN"]) {
+for (const key of ["DATABASE_URL", "OPENAI_API_KEY", "CODEX_MODEL", "LINE_CHANNEL_ACCESS_TOKEN"]) {
   if (!process.env[key]) throw new Error(`Missing ${key}`);
 }
 

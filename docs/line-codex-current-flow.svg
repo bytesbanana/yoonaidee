@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 759.2359999999999 853" width="759.2359999999999" height="853" style="--bg:#ffffff;--fg:#1f2328;--line:#d1d9e0;--accent:#0969da;--muted:#59636e;background:var(--bg)">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+  text { font-family: 'Inter', system-ui, sans-serif; }
+  svg {
+    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */
+    --_text:          var(--fg);
+    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));
+    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));
+    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));
+    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));
+    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));
+    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));
+    --_group-fill:    var(--bg);
+    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));
+    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));
+    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));
+  }
+</style>
+<defs>
+  <marker id="seq-arrow" markerWidth="8" markerHeight="5" refX="8" refY="2.5" orient="auto-start-reverse">
+    <polygon points="0 0, 8 2.5, 0 5" fill="var(--_arrow)" />
+  </marker>
+  <marker id="seq-arrow-open" markerWidth="8" markerHeight="5" refX="8" refY="2.5" orient="auto-start-reverse">
+    <polyline points="0 0, 8 2.5, 0 5" fill="none" stroke="var(--_arrow)" stroke-width="1" />
+  </marker>
+</defs>
+<g class="block" data-type="alt" data-label="Missing required field">
+  <rect x="163.70499999999998" y="480" width="424.1499999999999" height="268" rx="0" ry="0" fill="none" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="163.70499999999998" y="480" width="150.97" height="18" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="169.70499999999998" y="489" font-size="11" font-weight="600" fill="var(--_text-sec)" dy="3.8499999999999996">alt [Missing required field]</text>
+  <line x1="163.70499999999998" y1="588" x2="587.8549999999999" y2="588" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+  <text x="171.70499999999998" y="602" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">[Profile newly complete or changed]</text>
+  <line x1="163.70499999999998" y1="700" x2="587.8549999999999" y2="700" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+  <text x="171.70499999999998" y="714" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">[Complete and unchanged]</text>
+</g>
+<g class="block" data-type="alt" data-label="Duplicate event or analysis already active">
+  <rect x="163.70499999999998" y="238" width="565.531" height="550" rx="0" ry="0" fill="none" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="163.70499999999998" y="238" width="255.25" height="18" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="169.70499999999998" y="247" font-size="11" font-weight="600" fill="var(--_text-sec)" dy="3.8499999999999996">alt [Duplicate event or analysis already active]</text>
+  <line x1="163.70499999999998" y1="314" x2="729.2359999999999" y2="314" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+  <text x="171.70499999999998" y="328" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">[Intake needed]</text>
+</g>
+<line class="lifeline" data-actor="U" x1="76.9855" y1="70" x2="76.9855" y2="823" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="L" x1="216.9855" y1="70" x2="216.9855" y2="823" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="W" x1="365.0355" y1="70" x2="365.0355" y2="823" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="D" x1="523.8299999999999" y1="70" x2="523.8299999999999" y2="823" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="C" x1="668.5455" y1="70" x2="668.5455" y2="823" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<g class="message" data-from="U" data-to="L" data-label="Sends a message" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="76.9855" y1="90" x2="216.9855" y2="90" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="146.9855" y="80" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Sends a message</text>
+</g>
+<g class="message" data-from="L" data-to="W" data-label="Signed webhook with LINE userId" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="216.9855" y1="130" x2="365.0355" y2="130" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="291.0105" y="120" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Signed webhook with LINE userId</text>
+</g>
+<g class="message" data-from="W" data-to="D" data-label="Verify signature first, then dedupe and load profile" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="365.0355" y1="170" x2="523.8299999999999" y2="170" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="444.43274999999994" y="160" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Verify signature first, then dedupe and load profile</text>
+</g>
+<g class="message" data-from="D" data-to="W" data-label="Profile JSON and analysis status" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="523.8299999999999" y1="210" x2="365.0355" y2="210" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="444.43274999999994" y="200" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Profile JSON and analysis status</text>
+</g>
+<g class="message" data-from="W" data-to="L" data-label="HTTP 200, no chat reply" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="365.0355" y1="278" x2="216.9855" y2="278" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="291.0105" y="268" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">HTTP 200, no chat reply</text>
+</g>
+<g class="message" data-from="W" data-to="C" data-label="Extract updates from text and saved profile" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="365.0355" y1="342" x2="668.5455" y2="342" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="516.7905" y="332" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Extract updates from text and saved profile</text>
+</g>
+<g class="message" data-from="C" data-to="W" data-label="Structured preference update" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="668.5455" y1="382" x2="365.0355" y2="382" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="516.7905" y="372" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Structured preference update</text>
+</g>
+<g class="message" data-from="W" data-to="W" data-label="Check destination, monthly rent, transport" data-line-style="solid" data-arrow-head="filled" data-self="true">
+  <polyline points="365.0355,422 395.0355,422 395.0355,442 365.0355,442" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="403.0355" y="432" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Check destination, monthly rent, transport</text>
+</g>
+<g class="message" data-from="W" data-to="D" data-label="Save partial profile, no job" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="365.0355" y1="520" x2="523.8299999999999" y2="520" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="444.43274999999994" y="510" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Save partial profile, no job</text>
+</g>
+<g class="message" data-from="W" data-to="L" data-label="Reply with one text question" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="365.0355" y1="560" x2="216.9855" y2="560" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="291.0105" y="550" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Reply with one text question</text>
+</g>
+<g class="message" data-from="W" data-to="D" data-label="Save profile and one ANALYSIS snapshot atomically" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="365.0355" y1="624" x2="523.8299999999999" y2="624" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="444.43274999999994" y="614" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Save profile and one ANALYSIS snapshot atomically</text>
+</g>
+<g class="message" data-from="W" data-to="L" data-label="Reply with Flex confirmation" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="365.0355" y1="664" x2="216.9855" y2="664" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="291.0105" y="654" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Reply with Flex confirmation</text>
+</g>
+<g class="message" data-from="W" data-to="D" data-label="Record event, no new job" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="365.0355" y1="728" x2="523.8299999999999" y2="728" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="444.43274999999994" y="718" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Record event, no new job</text>
+</g>
+<g class="message" data-from="W" data-to="L" data-label="HTTP 200" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="365.0355" y1="768" x2="216.9855" y2="768" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="291.0105" y="758" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">HTTP 200</text>
+</g>
+<g class="note" data-position="over" data-actors="W,D">
+  <polygon points="275.97975,776 606.8857499999999,776 612.8857499999999,782 612.8857499999999,799 275.97975,799" fill="var(--bg)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <polygon points="606.8857499999999,776 612.8857499999999,782 606.8857499999999,782" fill="var(--_inner-stroke)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="444.43274999999994" y="787.5" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">An explicit retry after terminal failure queues the saved profile again</text>
+</g>
+<g class="actor" data-id="U" data-label="LINE user" data-type="participant">
+  <rect x="30" y="30" width="93.971" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="76.9855" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">LINE user</text>
+</g>
+<g class="actor" data-id="L" data-label="LINE API" data-type="participant">
+  <rect x="173.70499999999998" y="30" width="86.561" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="216.9855" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">LINE API</text>
+</g>
+<g class="actor" data-id="W" data-label="Next.js webhook" data-type="participant">
+  <rect x="300.266" y="30" width="129.539" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="365.0355" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">Next.js webhook</text>
+</g>
+<g class="actor" data-id="D" data-label="PostgreSQL" data-type="participant">
+  <rect x="469.80499999999995" y="30" width="108.04999999999998" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="523.8299999999999" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">PostgreSQL</text>
+</g>
+<g class="actor" data-id="C" data-label="Codex SDK" data-type="participant">
+  <rect x="617.8549999999999" y="30" width="101.381" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="668.5455" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">Codex SDK</text>
+</g>
+</svg>

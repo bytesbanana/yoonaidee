@@ -24,7 +24,7 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 
 | Priority | Feature | Done when… |
 | --- | --- | --- |
-| P0 | LINE entry | Webhook verifies LINE signature, deduplicates events, acknowledges promptly |
+| P0 | LINE entry | Webhook verifies LINE signature, deduplicates events, replies to intake; queues analysis only when ready |
 | P0 | Conversation AI | Extracts workplace, budget, travel mode and lifestyle from natural language |
 | P0 | Clarification | Asks one concise question when a critical detail is missing or ambiguous |
 | P0 | Neighborhood discovery | Agent calls `searchNeighborhoods` and `getNeighborhoodDetails` against prepared Bangkok JSON |
@@ -32,7 +32,7 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 | P0 | LINE Flex results | Sends top 3 cards using `buildRecommendationFlex(result)` |
 | P0 | Demo reliability | Mock data and replayable conversation work when external APIs are unavailable |
 | P1 | LIFF results | Shareable/mobile-friendly result page with scores and evidence labels |
-| P1 | Asynchronous progress | Persistent job status while processing; notification when finished |
+| P1 | Asynchronous progress | Persistent analysis job status and result notification; suppress results from stale profile versions |
 | P2 | Rental listings and live routing | Only if a verified provider/data source is ready |
 | P2 | What-if refinement | “What if I spend less or commute longer?” updates comparisons |
 
@@ -41,8 +41,8 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 ## 5. User journey
 
 1. User sends a free-form LINE message.
-2. Webhook stores and queues work; immediately returns HTTP 200.
-3. Conversation agent extracts preferences, checks readiness, and asks only if necessary.
+2. Webhook loads PostgreSQL memory by verified LINE user ID. It silently acknowledges messages while that user has an active analysis.
+3. Webhook uses Codex to update preferences. Missing destination, budget, or transport gets a text question with no job. A newly complete or changed profile queues one `ANALYSIS` job with the profile snapshot and gets a Flex confirmation.
 4. Research agent calls neighborhood tools, compares options, and returns structured recommendations.
 5. A deterministic function computes/verifies numerical scores when feature values exist; AI explains trade-offs without fabricating numbers.
 6. LINE sends a Flex summary with an optional LIFF results link.

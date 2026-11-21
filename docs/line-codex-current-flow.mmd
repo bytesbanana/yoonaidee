@@ -1,0 +1,29 @@
+sequenceDiagram
+    participant U as LINE user
+    participant L as LINE API
+    participant W as Next.js webhook
+    participant D as PostgreSQL
+    participant C as Codex SDK
+
+    U->>L: Sends a message
+    L->>W: Signed webhook with LINE userId
+    W->>D: Verify signature first, then dedupe and load profile
+    D-->>W: Profile JSON and analysis status
+    alt Duplicate event or analysis already active
+        W-->>L: HTTP 200, no chat reply
+    else Intake needed
+        W->>C: Extract updates from text and saved profile
+        C-->>W: Structured preference update
+        W->>W: Check destination, monthly rent, transport
+        alt Missing required field
+            W->>D: Save partial profile, no job
+            W->>L: Reply with one text question
+        else Profile newly complete or changed
+            W->>D: Save profile and one ANALYSIS snapshot atomically
+            W->>L: Reply with Flex confirmation
+        else Complete and unchanged
+            W->>D: Record event, no new job
+        end
+        W-->>L: HTTP 200
+    end
+    Note over W,D: An explicit retry after terminal failure queues the saved profile again
