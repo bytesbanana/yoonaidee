@@ -1,11 +1,17 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { BriefcaseBusiness, Dumbbell, MapPin, ShoppingBasket, UserRound, type LucideIcon } from "lucide-react";
+import { BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
 import {
   categoryLabels,
   type PreferenceCategory,
 } from "@/lib/preferences/categories";
+
+type Category = PreferenceCategory["category"];
+
+const catalog = (Object.keys(categoryLabels) as Category[]).sort(
+  (a, b) => categoryLabels[a][0].localeCompare(categoryLabels[b][0]),
+);
 
 type Priorities = {
   sessionId: string;
@@ -76,6 +82,10 @@ export function ProfileView({
   );
 }
 
+function toRows(categories: PreferenceCategory[]) {
+  return categories.map(({ category, places, weight }) => ({ category, places, value: weight?.toString() ?? "" }));
+}
+
 function PriorityEditor({
   priorities,
   message,
@@ -90,21 +100,52 @@ function PriorityEditor({
   reload: () => void;
 }) {
   const [saved, setSaved] = useState(priorities);
-  const [draft, setDraft] = useState<Partial<Record<PreferenceCategory["category"], string>>>({});
+  const [rows, setRows] = useState(() => toRows(priorities?.categories ?? []));
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selected, setSelected] = useState<Category | "">("");
+  const [limitMessage, setLimitMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
   const [error, setError] = useState("");
-  const categories = saved?.categories ?? [];
-  const rows = categories.map((item) => ({
-    ...item,
-    value: draft[item.category] ?? (item.weight?.toString() ?? ""),
-  }));
   const total = rows.reduce((sum, { value }) => sum + Number(value), 0);
-  const valid = rows.length > 0 && rows.every(({ value }) => Number(value) >= 1) && total === 100;
-  const changed = rows.some(({ weight, value }) => (weight?.toString() ?? "") !== value);
+  const valid = rows.every(({ value }) => Number(value) >= 1) && total <= 100;
+  const previous = saved?.categories ?? [];
+  const changed = rows.length !== previous.length || rows.some(({ category, value }, index) =>
+    previous[index]?.category !== category || previous[index]?.weight !== (value ? Number(value) : null),
+  );
+  const available = catalog.filter((category) => !rows.some((row) => row.category === category));
+  const busy = status === "saving" || status === "conflict";
+
+  function updateValue(category: Category, value: string, next: string) {
+    if (!/^\d{0,3}$/.test(next)) return;
+    const nextTotal = total - Number(value) + Number(next);
+    if (Number(next) > 100 || (nextTotal > 100 && nextTotal >= total)) {
+      setLimitMessage("The total can’t exceed 100%. Lower another category to free up room.");
+      return;
+    }
+    setRows((current) => current.map((row) => row.category === category ? { ...row, value: next } : row));
+    setLimitMessage("");
+    setStatus("idle");
+  }
+
+  function addCategory() {
+    if (!selected || !available.includes(selected)) return;
+    const original = previous.find(({ category }) => category === selected);
+    setRows((current) => [...current, { category: selected, places: original?.places ?? [], value: "" }]);
+    setSelected("");
+    setPickerOpen(false);
+    setLimitMessage("");
+    setStatus("idle");
+  }
+
+  function removeCategory(category: Category) {
+    setRows((current) => current.filter((row) => row.category !== category));
+    setLimitMessage("");
+    setStatus("idle");
+  }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!saved || !valid || !changed || status === "saving" || status === "conflict") return;
+    if (!valid || !changed || busy || message) return;
     const token = getToken();
     if (!token) {
       setError("Open this page from LINE to save your priorities.");
@@ -118,8 +159,8 @@ function PriorityEditor({
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: saved.sessionId,
-          version: saved.version,
+          sessionId: saved?.sessionId ?? null,
+          version: saved?.version ?? null,
           weights: rows.map(({ category, value }) => ({ category, weight: Number(value) })),
         }),
       });
@@ -129,8 +170,9 @@ function PriorityEditor({
         setStatus(response.status === 409 ? "conflict" : "error");
         return;
       }
-      setSaved({ ...saved, categories: result.categories, version: result.version });
-      setDraft({});
+      setSaved(result);
+      setRows(toRows(result.categories));
+      setLimitMessage("");
       setStatus("saved");
     } catch {
       setError("Could not save your priorities. Try again shortly.");
@@ -142,7 +184,7 @@ function PriorityEditor({
     <form onSubmit={save} aria-labelledby="lifestyle-priorities" className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
       <div className="bg-emerald-950 p-5 text-white sm:p-6">
         <h2 id="lifestyle-priorities" className="text-2xl font-semibold tracking-tight">Lifestyle priorities</h2>
-        <p className="mt-1 text-sm text-emerald-50/85">Split 100% across the places that matter to you.</p>
+        <p className="mt-1 text-sm text-emerald-50/85">Allocate up to 100% across the places that matter to you.</p>
         <div className="mt-5 flex items-baseline justify-between gap-2 text-sm">
           <span className="font-medium">Total allocated</span>
           <output className="tabular-nums"><strong className="text-xl">{total}%</strong><span className="text-emerald-50/75"> / 100%</span></output>
@@ -154,16 +196,39 @@ function PriorityEditor({
           className="mt-2 block h-2 w-full overflow-hidden rounded-full bg-white/20 [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-emerald-300 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-emerald-300"
         />
       </div>
-      {rows.length ? (
-        <>
-          <fieldset disabled={status === "saving"} className="min-w-0">
-            <legend className="sr-only">Category percentages</legend>
+      {!message && (
+        <fieldset disabled={busy} className="min-w-0">
+          <legend className="sr-only">Lifestyle categories</legend>
+          <div className="border-b border-stone-100 px-5 py-4 sm:px-6">
+            {pickerOpen ? (
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="min-w-40 flex-1 text-sm font-medium">
+                  Category
+                  <select
+                    value={selected}
+                    onChange={(event) => setSelected(event.target.value as Category | "")}
+                    className="mt-1 block h-11 w-full rounded-xl border border-stone-300 bg-white px-2 text-base"
+                  >
+                    <option value="">Choose a category</option>
+                    {available.map((category) => <option key={category} value={category}>{categoryLabels[category][0]}</option>)}
+                  </select>
+                </label>
+                <button type="button" disabled={!selected} onClick={addCategory} className="h-11 rounded-xl bg-emerald-900 px-4 text-sm font-semibold text-white disabled:bg-stone-200 disabled:text-stone-600">Add</button>
+                <button type="button" onClick={() => { setPickerOpen(false); setSelected(""); }} className="h-11 px-2 text-sm font-medium text-stone-700">Cancel</button>
+              </div>
+            ) : available.length > 0 && (
+              <button type="button" onClick={() => setPickerOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-100">
+                <Plus aria-hidden className="size-4" /> Add category
+              </button>
+            )}
+          </div>
+          {rows.length === 0 && <p className="px-5 py-5 text-sm text-stone-600 sm:px-6">No categories selected.</p>}
             <ul className="divide-y divide-stone-100 px-5 sm:px-6">
               {rows.map(({ category, places, value }) => {
                 const label = categoryLabels[category][0];
                 const Icon = categoryIcons[category] ?? MapPin;
                 return (
-                  <li key={category} className="grid grid-cols-[minmax(0,1fr)_5.25rem] items-center gap-3 py-4">
+                  <li key={category} className="grid grid-cols-[minmax(0,1fr)_4.75rem_2.75rem] items-center gap-2 sm:gap-3 py-4">
                     <div className="flex min-w-0 items-start gap-3">
                       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-800">
                         <Icon aria-hidden className="size-5" />
@@ -183,30 +248,36 @@ function PriorityEditor({
                         inputMode="numeric"
                         value={value}
                         placeholder="—"
-                        onChange={(event) => {
-                          const next = event.target.value;
-                          if (!/^\d{0,3}$/.test(next) || Number(next) > 100) return;
-                          setDraft((previous) => ({ ...previous, [category]: next }));
-                          if (status !== "conflict") setStatus("idle");
-                        }}
+                        onChange={(event) => updateValue(category, value, event.target.value)}
                         className="w-full min-w-0 bg-transparent pl-2 text-right text-base font-semibold tabular-nums outline-none"
                       />
                       <span aria-hidden className="text-sm text-stone-600">%</span>
                     </label>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${label}`}
+                      onClick={() => removeCategory(category)}
+                      className="grid size-11 place-items-center rounded-xl text-stone-600 hover:bg-red-50 hover:text-red-800"
+                    >
+                      <X aria-hidden className="size-4" />
+                    </button>
                   </li>
                 );
               })}
             </ul>
-          </fieldset>
+        </fieldset>
+      )}
+      {!message && (rows.length > 0 || changed || status !== "idle") && (
           <div className="border-t border-stone-200 bg-stone-50 px-5 py-4 sm:px-6">
             {status === "error" || status === "conflict" ? (
               <p role="alert" className="mb-3 text-sm text-red-800">{error}</p>
             ) : (
               <p role="status" className="mb-3 text-sm text-stone-600">
                 {status === "saved" ? "Priorities saved." :
-                  total > 100 ? `Remove ${total - 100}% to reach 100%.` :
-                  total < 100 ? `${100 - total}% left to allocate.` :
-                  valid ? "100% allocated." : "Give each category at least 1%."}
+                  limitMessage ||
+                  (total > 100 ? `Remove ${total - 100}% to reach 100%.` :
+                    !valid ? "Give each category at least 1%." :
+                      total < 100 ? `${100 - total}% left to allocate.` : "100% allocated.")}
               </p>
             )}
             {status === "conflict" ? (
@@ -217,10 +288,10 @@ function PriorityEditor({
               </button>
             )}
           </div>
-        </>
-      ) : (
+      )}
+      {message && (
         <div className="px-5 py-5 sm:px-6">
-          <p className="text-sm text-stone-600" role="status">{message ?? "Tell us which places matter to you in the Yoo Nai Dee LINE chat. Your categories will appear here."}</p>
+          <p className="text-sm text-stone-600" role="status">{message}</p>
           {signIn && <button type="button" onClick={signIn} className="mt-4 rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">Sign in with LINE</button>}
         </div>
       )}

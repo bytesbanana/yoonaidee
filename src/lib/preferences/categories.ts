@@ -18,6 +18,7 @@ export const categoryLabels = {
   nightMarket: ["Night market", "ตลาดกลางคืน"],
   nightlife: ["Nightlife", "สถานบันเทิงกลางคืน"],
   gym: ["Gym", "ยิม"],
+  hobby: ["Hobby or activity", "งานอดิเรกหรือกิจกรรม"],
   park: ["Park", "สวนสาธารณะ"],
   sports: ["Sports court or field", "สนามกีฬา"],
   pool: ["Swimming pool", "สระว่ายน้ำ"],

@@ -1,7 +1,6 @@
-import { intakePool } from "@/lib/db/intake-db";
+import { intakePool, intakeTransaction } from "@/lib/db/intake-db";
 import { z } from "zod";
-import { categoryId, hasCompleteWeights, preferenceCategories } from "@/lib/preferences/categories";
-import { pendingWeightCategories } from "@/lib/agent/conversation";
+import { categoryId, preferenceCategories } from "@/lib/preferences/categories";
 
 const verifiedToken = z.object({ sub: z.string().min(1) });
 const storedProfile = z.object({
@@ -13,19 +12,18 @@ const storedProfile = z.object({
 });
 
 const weightUpdate = z.object({
-  sessionId: z.uuid(),
-  version: z.number().int().nonnegative(),
+  sessionId: z.uuid().nullable(),
+  version: z.number().int().nonnegative().nullable(),
   weights: z.array(z.object({
     category: categoryId,
     weight: z.number().int().min(1).max(100),
-  })).min(1).max(categoryId.options.length),
+  })).max(categoryId.options.length),
 });
 
 type Session = {
   id: string;
   profile_version: number;
   preferences: unknown;
-  awaiting_question: string | null;
 };
 
 const headers = { "Cache-Control": "private, no-store" };
@@ -57,7 +55,7 @@ async function authenticate(request: Request) {
 
 async function readSession(lineUserId: string) {
   const { rows: [session] } = await intakePool.query<Session>(
-    `SELECT s.id, s.profile_version, s.preferences, s.awaiting_question
+    `SELECT s.id, s.profile_version, s.preferences
      FROM conversation_sessions s JOIN users u ON u.id = s.user_id
      WHERE u.line_user_id = $1 AND s.closed_at IS NULL`,
     [lineUserId],
@@ -96,42 +94,50 @@ export async function PATCH(request: Request) {
     const user = await authenticate(request);
     if (user instanceof Response) return user;
     const update = weightUpdate.safeParse(await request.json().catch(() => null));
-    if (!update.success || !hasCompleteWeights(update.data.weights)) {
-      return json({ error: "Enter a whole percentage for each category. The total must be 100%." }, 400);
+    if (!update.success || update.data.weights.reduce((total, row) => total + row.weight, 0) > 100) {
+      return json({ error: "Enter whole percentages from 1 to 100 with a combined total of at most 100%." }, 400);
     }
 
     const { sessionId, version, weights } = update.data;
-    const session = await readSession(user);
-    const conflict = () => json({ error: "Your saved priorities changed. Reload them before saving again." }, 409);
-    if (!session || session.id !== sessionId || session.profile_version !== version) return conflict();
-
-    const { categories = [] } = storedProfile.parse(session.preferences);
-    const weightsByCategory = new Map(weights.map(({ category, weight }) => [category, weight]));
-    if (weights.length !== categories.length || weightsByCategory.size !== categories.length
-      || categories.some(({ category }) => !weightsByCategory.has(category))) {
-      return json({ error: "Provide one percentage for each saved category." }, 400);
+    if (new Set(weights.map(({ category }) => category)).size !== weights.length) {
+      return json({ error: "Each category can only be added once." }, 400);
     }
 
-    const updated = categories.map((category) => ({
-      ...category,
-      weight: weightsByCategory.get(category.category) ?? category.weight,
-    }));
-    const completedIntake = pendingWeightCategories(session.preferences, session.awaiting_question) !== null;
+    const session = await readSession(user);
+    const conflict = () => json({ error: "Your saved priorities changed. Reload them before saving again." }, 409);
+    if (!session) {
+      if (sessionId !== null || version !== null) return conflict();
+      const created = await intakeTransaction(async (client) => {
+        await client.query("INSERT INTO users (line_user_id) VALUES ($1) ON CONFLICT DO NOTHING", [user]);
+        const categories = weights.map((item) => ({ ...item, places: [] }));
+        const { rows: [inserted] } = await client.query<{ id: string; profile_version: number }>(
+          `INSERT INTO conversation_sessions (user_id, preferences, profile_version)
+           SELECT id, $2::jsonb, 1 FROM users WHERE line_user_id = $1
+           ON CONFLICT (user_id) WHERE closed_at IS NULL DO NOTHING
+           RETURNING id, profile_version`,
+          [user, JSON.stringify({ categories })],
+        );
+        return inserted ? { sessionId: inserted.id, version: inserted.profile_version, categories } : null;
+      });
+      return created ? json(created) : conflict();
+    }
+
+    if (session.id !== sessionId || session.profile_version !== version) return conflict();
+
+    const { categories = [] } = storedProfile.parse(session.preferences);
+    const placesByCategory = new Map(categories.map(({ category, places }) => [category, places]));
+    const updated = weights.map((item) => ({ ...item, places: placesByCategory.get(item.category) ?? [] }));
     const { rows: [saved] } = await intakePool.query<{ profile_version: number }>(
       `UPDATE conversation_sessions
        SET preferences = jsonb_set(preferences, '{categories}', $3::jsonb),
            profile_version = profile_version + 1,
-           ready_for_analysis = CASE WHEN $4 THEN true ELSE ready_for_analysis END,
-           awaiting_question = CASE WHEN $4 THEN NULL ELSE awaiting_question END,
-           state = CASE WHEN $4 THEN 'READY' ELSE state END,
            updated_at = now()
        WHERE id = $1 AND profile_version = $2 AND closed_at IS NULL
-         AND awaiting_question IS NOT DISTINCT FROM $5
        RETURNING profile_version`,
-      [sessionId, version, JSON.stringify(updated), completedIntake, session.awaiting_question],
+      [sessionId, version, JSON.stringify(updated)],
     );
     if (!saved) return conflict();
-    return json({ categories: updated, version: saved.profile_version });
+    return json({ sessionId, categories: updated, version: saved.profile_version });
   } catch {
     console.error("line.settings.write_failed");
     return json({ error: "Could not save your priorities. Try again shortly." }, 503);

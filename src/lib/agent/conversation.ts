@@ -93,24 +93,35 @@ const questions = {
   },
 };
 
-function withAnchor(fields: z.infer<typeof profileFields>) {
+const previousAnchor = z.object({
+  categories: preferenceCategories,
+  destinations: z.array(z.object({ name: z.string(), type: z.string() })),
+});
+
+function withAnchor(fields: z.infer<typeof profileFields>, previousProfile: unknown) {
   const categories = new Map(fields.categories.map((item) => [item.category, item]));
   const anchor = fields.destinationType === "workplace" ? "work" : fields.destinationType === "school" ? "school" : null;
   if (anchor && fields.destination) {
     const existing = categories.get(anchor);
+    const previous = previousAnchor.safeParse(previousProfile);
+    const destination = previous.data?.destinations[0];
+    if (!existing && destination?.type === fields.destinationType && destination.name === fields.destination
+      && !previous.data?.categories.some(({ category }) => category === anchor)) {
+      return [...categories.values()];
+    }
     const places = [...new Set([fields.destination, ...(existing?.places ?? [])])].slice(0, 5);
     categories.set(anchor, { category: anchor, places, weight: existing?.weight ?? null });
   }
   return [...categories.values()];
 }
 
-export function evaluateConversation(output: unknown) {
+export function evaluateConversation(output: unknown, previousProfile?: unknown) {
   const { profile: fields, language } = extractionSchema.parse(output);
   const copy = questions[language];
   const question = !fields.destination ? copy.destination
     : !fields.maxMonthlyRent ? copy.budget
     : !fields.primaryTransport ? copy.transport : null;
-  return { profile: toProfile(fields, language, withAnchor(fields)), ready: question === null, question, reply: question ?? copy.ready };
+  return { profile: toProfile(fields, language, withAnchor(fields, previousProfile)), ready: question === null, question, reply: question ?? copy.ready };
 }
 
 // Recognize weight prompts saved before weights became optional.
@@ -162,5 +173,5 @@ export async function processConversation(input: {
     input,
     outputSchema: z.toJSONSchema(extractionSchema, { target: "draft-7" }),
   });
-  return evaluateConversation(output);
+  return evaluateConversation(output, input.previousProfile);
 }

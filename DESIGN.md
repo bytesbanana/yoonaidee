@@ -31,8 +31,8 @@ Spacing scale: Tailwind default (`p-4`, `p-6`, `gap-2`, `gap-4`). Type scale: `t
 
 - Put the profile title and small LINE avatar at the top, with housing details below the priorities editor.
 - Give lifestyle priorities the most prominent card. Show the total out of 100% in the header, then one row per saved category with its name, places, a proportional bar and a numeric percentage field.
-- Use emerald for allocation and the primary action. Keep the inputs large enough for mobile touch and require whole percentages totaling 100% before saving.
-- Keep the priority card visible when no categories are available. Direct users to the LINE chat to add categories.
+- Use emerald for allocation and the primary action. Keep the inputs large enough for mobile touch and require whole percentages and cap the combined allocation at 100%.
+- Keep the priority card visible when no categories are available. Put the category picker below the allocation bar and provide a remove action on each row.
 
 ### State blocks
 
