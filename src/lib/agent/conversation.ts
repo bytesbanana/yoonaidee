@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { runCodexIntake } from "./codex-intake";
-import { categoryLabels, hasCompleteWeights, preferenceCategories, suggestWeights, type PreferenceCategory } from "../preferences/categories";
+import { categoryLabel, categoryLabels, hasCompleteWeights, preferenceCategories, suggestWeights, type PreferenceCategory } from "../preferences/categories";
 
 const importance = z.enum(["low", "medium", "high"]).nullable();
 const profileFields = z.object({
@@ -41,9 +41,9 @@ A remote worker with no area preference yet needs an area question. Never guess 
 Extract an explicit upper monthly rent in THB; use the upper end of an explicit monthly rent range. Never turn an annual, purchase, foreign-currency or unclear budget into monthly THB rent. Clarify if needed.
 Only use flexible transport when the user explicitly says any mode is fine.
 Recognize Thai and English housing types, including คอนโด, หมู่บ้าน (village/housing estate), อพาร์ตเมนต์, and บ้าน.
-Use only these supported lifestyle categories (key, English label / Thai label): ${Object.entries(categoryLabels).map(([id, names]) => id + ": " + names.join(" / ")).join("; ")}.
+Use these predefined lifestyle categories where they fit (key, English label / Thai label): ${Object.entries(categoryLabels).map(([id, names]) => id + ": " + names.join(" / ")).join("; ")}.
 Return one row per selected category. A named branch, station, workplace or other location goes in places. An empty places list means any nearby option is fine. Preserve Google Maps links exactly as provided. Preserve previously selected categories and their weights unless the user changes or removes them. Migrate any legacy lifestyle entries mentioned in the saved profile into matching categories when no weighted catalog exists.
-Translate synonyms to the closest supported category only if the meaning matches. Never make custom categories.
+Use the closest predefined category when it matches. Preserve existing custom categories exactly unless the user changes or removes them. For an explicitly requested category without a match, use custom: followed by the user’s category name, up to 60 characters.
 Set weight to a whole percent only when the user supplied it or it was already saved. Leave unspecified weights null. Lifestyle categories and weights are optional. If a required field is genuinely unresolved, return null for that field so the application can ask for it.
 Maintain the existing lifestyle importance fields from the user's stated priorities; leave unmentioned interests null. Capture explicit deal-breakers under otherRequirements as needed.
 If the latest message is unrelated to housing, preserve the saved profile and do not infer new preferences. For a new session, use nulls, empty arrays, and false for unknown fields where applicable. Default language is Thai. Never suggest zones or listings, claim facts, or ask for contact details.`;
@@ -126,8 +126,7 @@ export function evaluateConversation(output: unknown, previousProfile?: unknown)
 
 // Recognize weight prompts saved before weights became optional.
 function weightQuestion(categories: PreferenceCategory[], language: "th" | "en") {
-  const labelIndex = language === "th" ? 1 : 0;
-  const split = suggestWeights(categories).map(({ category, weight }) => `${categoryLabels[category][labelIndex]} ${weight}%`).join(", ");
+  const split = suggestWeights(categories).map(({ category, weight }) => `${categoryLabel(category, language)} ${weight}%`).join(", ");
   const hasWeights = categories.some(({ weight }) => weight !== null);
   const total = categories.reduce((sum, { weight }) => sum + (weight ?? 0), 0);
   if (language === "th") {

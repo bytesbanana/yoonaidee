@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ProfileView } from "../profile/profile-view";
 import { useLiff } from "../providers/LiffProvider";
-import { categoryLabels, hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
+import { categoryLabel, hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
 
 type Settings = {
   sessionId: string;
@@ -149,7 +149,7 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
               {categories.map(({ category, places, weight }) => (
                 <li key={category} className="flex items-start justify-between gap-4 px-5 py-4">
                   <div>
-                    <p className="font-medium">{categoryLabels[category][0]}</p>
+                    <p className="font-medium">{categoryLabel(category)}</p>
                     <p className="mt-1 text-sm text-stone-600">{places.length ? places.join(" · ") : "Any nearby"}</p>
                   </div>
                   <span className="shrink-0 text-sm tabular-nums">{weight === null ? "Pending" : `${weight}%`}</span>

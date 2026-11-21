@@ -38,7 +38,35 @@ export const categoryLabels = {
   worship: ["Place of worship", "ศาสนสถาน"],
 } as const;
 
-export const categoryId = z.enum(Object.keys(categoryLabels) as (keyof typeof categoryLabels)[]);
+export const profileCategoryPresets = ["work", "school", "transit", "supermarket", "restaurant", "gym", "park", "hobby"] as const;
+
+const catalogIds = Object.keys(categoryLabels) as (keyof typeof categoryLabels)[];
+export const maxPreferenceCategories = catalogIds.length;
+export const maxCustomCategoryNameLength = 60;
+export const categoryId = z.union([
+  z.enum(catalogIds),
+  z.string().max("custom:".length + maxCustomCategoryNameLength).regex(/^custom:[^\s\u0000-\u001F\u007F](?:[^\u0000-\u001F\u007F]*[^\s\u0000-\u001F\u007F])?$/),
+]);
+
+export function categoryLabel(category: string, language: "en" | "th" = "en") {
+  if (category.startsWith("custom:")) return category.slice("custom:".length);
+  return categoryLabels[category as keyof typeof categoryLabels][language === "th" ? 1 : 0];
+}
+
+function normalizeCategoryName(value: string) {
+  return value.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+export function categoryFromName(value: string) {
+  const name = value.normalize("NFC").trim().replace(/\s+/g, " ");
+  const normalized = normalizeCategoryName(name);
+  return catalogIds.find((id) => categoryLabels[id].some((label) => normalizeCategoryName(label) === normalized))
+    ?? `custom:${name}`;
+}
+
+export function categoryKey(category: string) {
+  return category.startsWith("custom:") ? normalizeCategoryName(categoryFromName(categoryLabel(category))) : normalizeCategoryName(category);
+}
 
 const googleMapsLink = /^https:\/\/(?:maps\.app\.goo\.gl\/[^\s]+|goo\.gl\/maps\/[^\s]+|maps\.google\.com[/?][^\s]*|(?:www\.)?google\.com\/maps(?:[/?#][^\s]*)?)$/i;
 
@@ -57,7 +85,7 @@ const preferenceCategory = z.object({
   weight: z.number().int().min(1).max(100).nullable(),
 });
 
-export const preferenceCategories = z.array(preferenceCategory).max(categoryId.options.length);
+export const preferenceCategories = z.array(preferenceCategory).max(maxPreferenceCategories);
 export type PreferenceCategory = z.infer<typeof preferenceCategory>;
 
 export function hasCompleteWeights(categories: Pick<PreferenceCategory, "weight">[]) {

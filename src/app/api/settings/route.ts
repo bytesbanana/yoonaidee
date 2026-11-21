@@ -1,6 +1,6 @@
 import { intakePool, intakeTransaction } from "@/lib/db/intake-db";
 import { z } from "zod";
-import { categoryId, preferenceCategories, preferencePlaces } from "@/lib/preferences/categories";
+import { categoryId, categoryKey, maxPreferenceCategories, preferenceCategories, preferencePlaces } from "@/lib/preferences/categories";
 
 const verifiedToken = z.object({ sub: z.string().min(1) });
 const verifiedAccessToken = z.object({ client_id: z.string(), expires_in: z.number() });
@@ -20,7 +20,7 @@ const weightUpdate = z.object({
     category: categoryId,
     weight: z.number().int().min(1).max(100).nullable(),
     places: preferencePlaces.optional(),
-  })).max(categoryId.options.length),
+  })).max(maxPreferenceCategories),
 });
 
 type Session = {
@@ -135,7 +135,7 @@ export async function PATCH(request: Request) {
     }
 
     const { sessionId, version, weights } = update.data;
-    if (new Set(weights.map(({ category }) => category)).size !== weights.length) {
+    if (new Set(weights.map(({ category }) => categoryKey(category))).size !== weights.length) {
       return json({ error: "Each category can only be added once." }, 400);
     }
 

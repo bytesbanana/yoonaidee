@@ -4,17 +4,19 @@ import { useState, type FormEvent } from "react";
 import { GooglePlacePicker } from "./google-place-picker";
 import { BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
 import {
-  categoryLabels,
+  categoryFromName,
+  categoryId,
+  categoryKey,
+  categoryLabel,
+  maxCustomCategoryNameLength,
+  maxPreferenceCategories,
+  profileCategoryPresets,
   isGoogleMapsLink,
   preferencePlaces,
   type PreferenceCategory,
 } from "@/lib/preferences/categories";
 
 type Category = PreferenceCategory["category"];
-
-const catalog = (Object.keys(categoryLabels) as Category[]).sort(
-  (a, b) => categoryLabels[a][0].localeCompare(categoryLabels[b][0]),
-);
 
 type Priorities = {
   sessionId: string;
@@ -109,7 +111,8 @@ function PriorityEditor({
   const [saved, setSaved] = useState(priorities);
   const [rows, setRows] = useState(() => toRows(priorities?.categories ?? []));
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [selected, setSelected] = useState<Category | "">("");
+  const [selected, setSelected] = useState("");
+  const [customName, setCustomName] = useState("");
   const [limitMessage, setLimitMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
   const [error, setError] = useState("");
@@ -121,7 +124,11 @@ function PriorityEditor({
     previous[index]?.category !== category || previous[index]?.weight !== (value ? Number(value) : null)
     || previous[index]?.places.join("\n") !== locationsFromText(locationText).join("\n"),
   );
-  const available = catalog.filter((category) => !rows.some((row) => row.category === category));
+  const usedCategories = new Set(rows.map(({ category }) => categoryKey(category)));
+  const available = profileCategoryPresets.filter((category) => !usedCategories.has(categoryKey(category)));
+  const candidate = selected === "custom" ? categoryFromName(customName) : selected;
+  const duplicate = usedCategories.has(categoryKey(candidate));
+  const canAdd = categoryId.safeParse(candidate).success && !duplicate && rows.length < maxPreferenceCategories;
   const busy = status === "saving" || status === "conflict";
 
   function updateValue(category: Category, value: string, next: string) {
@@ -142,10 +149,11 @@ function PriorityEditor({
   }
 
   function addCategory() {
-    if (!selected || !available.includes(selected)) return;
-    const original = previous.find(({ category }) => category === selected);
-    setRows((current) => [...current, { category: selected, locationText: original?.places.join("\n") ?? "", value: "" }]);
+    if (!canAdd) return;
+    const original = previous.find(({ category }) => categoryKey(category) === categoryKey(candidate));
+    setRows((current) => [...current, { category: candidate, locationText: original?.places.join("\n") ?? "", value: "" }]);
     setSelected("");
+    setCustomName("");
     setPickerOpen(false);
     setLimitMessage("");
     setStatus("idle");
@@ -224,17 +232,32 @@ function PriorityEditor({
                   Category
                   <select
                     value={selected}
-                    onChange={(event) => setSelected(event.target.value as Category | "")}
+                    onChange={(event) => setSelected(event.target.value)}
                     className="mt-1 block h-11 w-full rounded-xl border border-stone-300 bg-white px-2 text-base"
                   >
                     <option value="">Choose a category</option>
-                    {available.map((category) => <option key={category} value={category}>{categoryLabels[category][0]}</option>)}
+                    {available.map((category) => <option key={category} value={category}>{categoryLabel(category)}</option>)}
+                    <option value="custom">Custom category</option>
                   </select>
                 </label>
-                <button type="button" disabled={!selected} onClick={addCategory} className="h-11 rounded-xl bg-emerald-900 px-4 text-sm font-semibold text-white disabled:bg-stone-200 disabled:text-stone-600">Add</button>
-                <button type="button" onClick={() => { setPickerOpen(false); setSelected(""); }} className="h-11 px-2 text-sm font-medium text-stone-700">Cancel</button>
+                <button type="button" disabled={!canAdd} onClick={addCategory} className="h-11 rounded-xl bg-emerald-900 px-4 text-sm font-semibold text-white disabled:bg-stone-200 disabled:text-stone-600">Add</button>
+                <button type="button" onClick={() => { setPickerOpen(false); setSelected(""); setCustomName(""); }} className="h-11 px-2 text-sm font-medium text-stone-700">Cancel</button>
+                {selected === "custom" && (
+                  <label className="w-full text-sm font-medium">
+                    Category name
+                    <input
+                      type="text"
+                      value={customName}
+                      maxLength={maxCustomCategoryNameLength}
+                      onChange={(event) => setCustomName(event.target.value)}
+                      placeholder="e.g. Music studio"
+                      className="mt-1 block h-11 w-full rounded-xl border border-stone-300 bg-white px-3 text-base"
+                    />
+                  </label>
+                )}
+                {duplicate && <p role="status" className="w-full text-sm text-stone-600">This category is already on your list.</p>}
               </div>
-            ) : available.length > 0 && (
+            ) : rows.length < maxPreferenceCategories && (
               <button type="button" onClick={() => setPickerOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-100">
                 <Plus aria-hidden className="size-4" /> Add category
               </button>
@@ -243,7 +266,7 @@ function PriorityEditor({
           {rows.length === 0 && <p className="px-5 py-5 text-sm text-stone-600 sm:px-6">No categories selected.</p>}
             <ul className="divide-y divide-stone-100 px-5 sm:px-6">
               {rows.map(({ category, locationText, value }) => {
-                const label = categoryLabels[category][0];
+                const label = categoryLabel(category);
                 const Icon = categoryIcons[category] ?? MapPin;
                 const places = locationsFromText(locationText);
                 const locationLabel = places.map((place) => isGoogleMapsLink(place) ? "Google Maps location" : place).join(" · ");
