@@ -66,7 +66,7 @@ async function runConversation() {
       return true;
     }
 
-    const { rows: [session] } = await client.query<{ profile_version: number; next_message_sequence: string; should_analyze: boolean }>(
+    const { rows: [session] } = await client.query<{ next_message_sequence: string }>(
       `WITH prior AS (
          SELECT id, (preferences - 'language') IS DISTINCT FROM ($2::jsonb - 'language') AS changed, ready_for_analysis
          FROM conversation_sessions WHERE id = $1 FOR UPDATE
@@ -77,23 +77,11 @@ async function runConversation() {
           state = CASE WHEN $4 AND prior.ready_for_analysis AND NOT prior.changed THEN s.state ELSE $6 END,
           next_message_sequence = s.next_message_sequence + 1, updated_at = now()
        FROM prior WHERE s.id = prior.id
-       RETURNING s.profile_version, (s.next_message_sequence - 1) AS next_message_sequence,
-         ($4 AND (prior.changed OR NOT prior.ready_for_analysis)) AS should_analyze`,
+       RETURNING (s.next_message_sequence - 1) AS next_message_sequence`,
       [job.session_id, result.profile, { lastProcessedMessageId: job.message_id }, result.ready, result.question,
         result.ready ? "READY" : "WAITING_FOR_USER"],
     );
-    if (session.should_analyze) {
-      await client.query(
-        `INSERT INTO analysis_jobs (session_id, message_id, job_type, idempotency_key, profile_version, input_snapshot)
-         VALUES ($1, $2, 'ANALYSIS', $3, $4, $5)`,
-        [job.session_id, job.message_id, `analysis:${job.session_id}:${session.profile_version}`,
-          session.profile_version, { profile: result.profile, profileVersion: session.profile_version }],
-      );
-    }
-
-    const reply = result.ready && !session.should_analyze
-      ? (result.profile.language === "th" ? "รับทราบครับ ถ้าอยากปรับเงื่อนไขการค้นหา พิมพ์บอกได้เลย" : "Got it. You can message me if you'd like to change your search preferences.")
-      : result.reply;
+    const reply = result.reply;
     const { rows: [message] } = await client.query<{ id: string }>(
       `INSERT INTO conversation_messages (session_id, sequence_no, direction, content, delivery_status)
        VALUES ($1, $2, 'OUT', $3, 'PENDING') RETURNING id`,
@@ -119,7 +107,7 @@ async function runConversation() {
     return {
       jobId: job.id,
       clarificationNeeded: result.question !== null,
-      analysisQueued: session.should_analyze,
+      profileReady: result.ready,
     };
   });
   if (typeof completion === "object") console.info("line.agent.completed", completion);

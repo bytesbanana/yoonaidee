@@ -85,14 +85,14 @@ const questions = {
     budget: "งบค่าเช่าสูงสุดต่อเดือนประมาณกี่บาทครับ?",
     transport: "ปกติเดินทางด้วยอะไรเป็นหลักครับ เช่น BTS/MRT รถยนต์ มอเตอร์ไซค์ หรือเดิน?",
     categories: "อยากให้เน้นอะไรเป็นพิเศษครับ เช่น ยิม ซูเปอร์มาร์เก็ต ร้านอาหาร สวนสาธารณะ หรือใกล้สถานี?",
-    ready: "ได้ข้อมูลพอแล้วครับ กำลังส่งโจทย์ไปวิเคราะห์ย่านและที่พักที่เหมาะกับคุณ",
+    ready: "บันทึกความต้องการที่พักของคุณแล้วครับ ถ้าอยากปรับเงื่อนไข พิมพ์บอกได้เลย",
   },
   en: {
     destination: "Where do you work or travel to most often? If you have no regular commute, which city or area should we search?",
     budget: "What's your maximum monthly rent in Thai baht?",
     transport: "How do you usually get around, for example BTS/MRT, car, motorcycle, or walking?",
     categories: "What should I prioritize near home, such as a gym, supermarket, restaurants, parks, or transit?",
-    ready: "I have enough information to start looking for areas and homes that fit your needs.",
+    ready: "I’ve saved your housing preferences. You can update them anytime in this chat.",
   },
 };
 
