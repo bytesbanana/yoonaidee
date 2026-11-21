@@ -1,3 +1,4 @@
+import { translate, type Language } from "@/lib/i18n";
 import { capitalizeWords } from "@/lib/format-text";
 import { categoryLabel, isGoogleMapsLink } from "./categories";
 import { normalizeLocation } from "./locations";
@@ -27,22 +28,22 @@ const categorySpellings = new Map([
 ]);
 
 function formatPreference(value: string, labels: ReadonlyMap<string, string>) {
-  const words = value.replaceAll("_", " ").trim().replace(/\s+/g, " ");
+  const words = value.replace(/[_-]/g, " ").trim().replace(/\s+/g, " ");
   return labels.get(words.toLowerCase()) ?? normalizeLocation(words);
 }
 
-export function formatTransport(mode: string) {
-  return formatPreference(mode, modeLabels);
+export function formatTransport(mode: string, language: Language = "en") {
+  return translate(language, formatPreference(mode, modeLabels));
 }
 
-export function formatHousingType(type: string) {
-  return formatPreference(type, housingLabels);
+export function formatHousingType(type: string, language: Language = "en") {
+  return translate(language, formatPreference(type, housingLabels));
 }
 
-export function formatPriorityCategory(category: string) {
-  return capitalizeWords(categoryLabel(category), categorySpellings);
+export function formatPriorityCategory(category: string, language: Language = "en") {
+  return capitalizeWords(categoryLabel(category, language), categorySpellings);
 }
 
-export function formatPriorityLocation(place: string) {
-  return isGoogleMapsLink(place) ? "Google Maps Location" : normalizeLocation(place);
+export function formatPriorityLocation(place: string, language: Language = "en") {
+  return isGoogleMapsLink(place) ? translate(language, "Google Maps Location") : normalizeLocation(place);
 }

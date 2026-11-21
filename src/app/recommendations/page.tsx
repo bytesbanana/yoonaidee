@@ -1,6 +1,7 @@
-import { RecommendationsHome, recommendationsMetadata } from "./recommendations-home";
+import { pageTitles } from "@/lib/i18n";
+import { RecommendationsHome } from "./recommendations-home";
 
-export const metadata = recommendationsMetadata;
+export const metadata = { title: pageTitles.recommendations };
 
 export default function RecommendationsPage() {
   return <RecommendationsHome />;

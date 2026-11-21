@@ -2,6 +2,8 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
+import { translate } from "@/lib/i18n";
+import { useLanguage } from "../providers/language-provider";
 
 type PlacesLibrary = {
   PlaceAutocompleteElement: new () => HTMLElement;
@@ -65,6 +67,7 @@ export function GooglePlacePicker({ categoryLabel, onSelect }: {
   categoryLabel: string;
   onSelect: (url: string) => boolean;
 }) {
+  const { language, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
   const host = useRef<HTMLDivElement>(null);
@@ -97,7 +100,7 @@ export function GooglePlacePicker({ categoryLabel, onSelect }: {
       if (!active) return;
 
       picker = new PlaceAutocompleteElement();
-      picker.setAttribute("aria-label", `Search Google Maps for ${categoryLabel}`);
+      picker.setAttribute("aria-label", translate(language, "Search Google Maps for {category}", { category: categoryLabel }));
       picker.style.width = "100%";
       picker.addEventListener("gmp-select", onPlace);
       picker.addEventListener("gmp-error", onError);
@@ -111,12 +114,12 @@ export function GooglePlacePicker({ categoryLabel, onSelect }: {
       picker?.removeEventListener("gmp-error", onError);
       picker?.remove();
     };
-  }, [categoryLabel, open]);
+  }, [categoryLabel, language, open]);
 
   if (!mapsKey) {
     return (
       <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="inline-block text-sm font-medium text-emerald-800 underline">
-        Open Google Maps to copy a link
+        {t("Open Google Maps to copy a link")}
       </a>
     );
   }
@@ -133,10 +136,10 @@ export function GooglePlacePicker({ categoryLabel, onSelect }: {
         className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-50"
       >
         <MapPin aria-hidden className="size-4" />
-        {open ? "Close Google Maps search" : "Choose from Google Maps"}
+        {t(open ? "Close Google Maps search" : "Choose from Google Maps")}
       </button>
       {open && <div ref={host} className="mt-2 min-w-0" />}
-      {feedback && <p role="status" className="mt-2 text-xs text-stone-600">{feedback}</p>}
+      {feedback && <p role="status" className="mt-2 text-xs text-stone-600">{t(feedback)}</p>}
     </div>
   );
 }

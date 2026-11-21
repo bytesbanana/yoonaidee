@@ -1,9 +1,7 @@
-import type { Metadata } from "next";
+import { pageTitles } from "@/lib/i18n";
 import { SettingsView } from "./settings-view";
 
-export const metadata: Metadata = {
-  title: "Housing preferences | Yoo Nai Dee",
-};
+export const metadata = { title: pageTitles.settings };
 
 export default function SettingsPage() {
   return <SettingsView />;

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
+import { useLanguage } from "../providers/language-provider";
 import { GooglePlacePicker } from "./google-place-picker";
 import { ArrowLeft, BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
 import {
@@ -52,15 +53,16 @@ export function ProfileView({
   getAuthHeaders: () => Record<string, string> | null;
   reload: () => void;
 }) {
+  const { t } = useLanguage();
   return (
-    <main className="min-h-dvh bg-stone-100 px-4 py-7 text-stone-900 [font-family:var(--font-geist-sans),sans-serif] sm:px-6 sm:py-12">
+    <main className="flex-1 bg-stone-100 px-4 py-7 text-stone-900 [font-family:var(--font-geist-sans),sans-serif] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-xl">
         <Link href="/" className="mb-2 inline-flex min-h-11 items-center gap-2 rounded-lg px-1 text-sm font-semibold text-emerald-900 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-900">
           <ArrowLeft aria-hidden="true" className="size-4" />
-          Back to recommendations
+          {t("Back to recommendations")}
         </Link>
         <header className="mb-6 flex items-center justify-between gap-4 px-1">
-          <h1 className="text-3xl font-semibold tracking-tight">Your profile</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("Your profile")}</h1>
           {profile?.pictureUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.pictureUrl} alt="" width={48} height={48} className="size-12 shrink-0 rounded-full object-cover" />
@@ -81,9 +83,9 @@ export function ProfileView({
         />
 
         <section aria-labelledby="housing-details" className="mt-5 rounded-3xl border border-stone-200 bg-white px-5 py-5 sm:px-6">
-          <h2 id="housing-details" className="text-base font-semibold">Profile Details</h2>
+          <h2 id="housing-details" className="text-base font-semibold">{t("Profile Details")}</h2>
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
-            {[["LINE Display Name", profile?.displayName && capitalizeWords(profile.displayName)], ...details].map(([label, value]) => (
+            {[[t("LINE Display Name"), profile?.displayName && capitalizeWords(profile.displayName)], ...details].map(([label, value]) => (
               <div key={label} className="min-w-0">
                 <dt className="text-xs text-stone-600">{label}</dt>
                 <dd className="mt-1 break-words text-sm font-medium">{value || "—"}</dd>
@@ -117,6 +119,7 @@ function PriorityEditor({
   getAuthHeaders: () => Record<string, string> | null;
   reload: () => void;
 }) {
+  const { language, t } = useLanguage();
   const [saved, setSaved] = useState(priorities);
   const [rows, setRows] = useState(() => toRows(priorities?.categories ?? []));
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -251,14 +254,14 @@ function PriorityEditor({
   return (
     <form onSubmit={save} aria-labelledby="lifestyle-priorities" className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
       <div className="bg-emerald-950 p-5 text-white sm:p-6">
-        <h2 id="lifestyle-priorities" className="text-2xl font-semibold tracking-tight">Lifestyle priorities</h2>
-        <p className="mt-1 text-sm text-emerald-50/85">Allocate up to 100% across the places that matter to you. Blank percentages share the remainder on save.</p>
+        <h2 id="lifestyle-priorities" className="text-2xl font-semibold tracking-tight">{t("Lifestyle priorities")}</h2>
+        <p className="mt-1 text-sm text-emerald-50/85">{t("Allocate up to 100% across the places that matter to you. Blank percentages share the remainder on save.")}</p>
         <div className="mt-5 flex items-baseline justify-between gap-2 text-sm">
-          <span className="font-medium">Total allocated</span>
+          <span className="font-medium">{t("Total allocated")}</span>
           <output className="tabular-nums"><strong className="text-xl">{total}%</strong><span className="text-emerald-50/75"> / 100%</span></output>
         </div>
         <progress
-          aria-label="Percentage allocated"
+          aria-label={t("Percentage allocated")}
           max={100}
           value={Math.min(total, 100)}
           className="mt-2 block h-2 w-full overflow-hidden rounded-full bg-white/20 [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-emerald-300 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-emerald-300"
@@ -266,53 +269,53 @@ function PriorityEditor({
       </div>
       {!message && (
         <fieldset disabled={busy} className="min-w-0">
-          <legend className="sr-only">Lifestyle categories</legend>
+          <legend className="sr-only">{t("Lifestyle categories")}</legend>
           <div className="border-b border-stone-100 px-5 py-4 sm:px-6">
             {pickerOpen ? (
               <div className="flex flex-wrap items-end gap-2">
                 <label className="min-w-40 flex-1 text-sm font-medium">
-                  Category
+                  {t("Category")}
                   <select
                     value={selected}
                     onChange={(event) => setSelected(event.target.value)}
                     className="mt-1 block h-11 w-full rounded-xl border border-stone-300 bg-white px-2 text-base"
                   >
-                    <option value="">Choose a category</option>
-                    {available.map((category) => <option key={category} value={category}>{formatPriorityCategory(category)}</option>)}
-                    <option value="custom">Custom category</option>
+                    <option value="">{t("Choose a category")}</option>
+                    {available.map((category) => <option key={category} value={category}>{formatPriorityCategory(category, language)}</option>)}
+                    <option value="custom">{t("Custom category")}</option>
                   </select>
                 </label>
-                <button type="button" disabled={!canAdd} onClick={addCategory} className="h-11 rounded-xl bg-emerald-900 px-4 text-sm font-semibold text-white disabled:bg-stone-200 disabled:text-stone-600">Add</button>
-                <button type="button" onClick={() => { setPickerOpen(false); setSelected(""); setCustomName(""); }} className="h-11 px-2 text-sm font-medium text-stone-700">Cancel</button>
+                <button type="button" disabled={!canAdd} onClick={addCategory} className="h-11 rounded-xl bg-emerald-900 px-4 text-sm font-semibold text-white disabled:bg-stone-200 disabled:text-stone-600">{t("Add")}</button>
+                <button type="button" onClick={() => { setPickerOpen(false); setSelected(""); setCustomName(""); }} className="h-11 px-2 text-sm font-medium text-stone-700">{t("Cancel")}</button>
                 {selected === "custom" && (
                   <label className="w-full text-sm font-medium">
-                    Category name
+                    {t("Category name")}
                     <input
                       type="text"
                       value={customName}
                       maxLength={maxCustomCategoryNameLength}
                       onChange={(event) => setCustomName(event.target.value)}
-                      placeholder="e.g. Music studio"
+                      placeholder={t("e.g. Music studio")}
                       className="mt-1 block h-11 w-full rounded-xl border border-stone-300 bg-white px-3 text-base"
                     />
                   </label>
                 )}
-                {duplicate && <p role="status" className="w-full text-sm text-stone-600">This category is already on your list.</p>}
+                {duplicate && <p role="status" className="w-full text-sm text-stone-600">{t("This category is already on your list.")}</p>}
               </div>
             ) : rows.length < maxPreferenceCategories && (
               <button type="button" onClick={() => setPickerOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-100">
-                <Plus aria-hidden className="size-4" /> Add category
+                <Plus aria-hidden className="size-4" /> {t("Add category")}
               </button>
             )}
           </div>
-          {rows.length === 0 && <p className="px-5 py-5 text-sm text-stone-600 sm:px-6">No categories selected.</p>}
+          {rows.length === 0 && <p className="px-5 py-5 text-sm text-stone-600 sm:px-6">{t("No categories selected.")}</p>}
             <ul className="divide-y divide-stone-100 px-5 sm:px-6">
               {rows.map(({ category, locationText, value }, index) => {
-                const label = formatPriorityCategory(category);
+                const label = formatPriorityCategory(category, language);
                 const Icon = categoryIcons[category] ?? MapPin;
                 const { places } = weights[index];
                 const defaultWeight = value ? undefined : resolvedWeights?.[index]?.weight;
-                const locationLabel = places.map(formatPriorityLocation).join(" · ");
+                const locationLabel = places.map((place) => formatPriorityLocation(place, language)).join(" · ");
                 return (
                   <li key={category} className="grid grid-cols-[minmax(0,1fr)_4.75rem_2.75rem] items-center gap-2 sm:gap-3 py-4">
                     <div className="flex min-w-0 items-start gap-3">
@@ -321,15 +324,15 @@ function PriorityEditor({
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="break-words font-semibold leading-tight">{label}</p>
-                        <p className="mt-1 break-words text-xs text-stone-600">{locationLabel || "Any Nearby"}</p>
-                        {defaultWeight !== undefined && <p className="mt-1 text-xs text-emerald-800">{defaultWeight}% on save</p>}
+                        <p className="mt-1 break-words text-xs text-stone-600">{locationLabel || t("Any Nearby")}</p>
+                        {defaultWeight !== undefined && <p className="mt-1 text-xs text-emerald-800">{t("{percent}% on save", { percent: defaultWeight })}</p>}
                         <div aria-hidden className="mt-2 h-1.5 max-w-48 overflow-hidden rounded-full bg-stone-100">
                           <div className="h-full rounded-full bg-emerald-600" style={{ width: `${defaultWeight ?? Number(value)}%` }} />
                         </div>
                       </div>
                     </div>
                     <label className="flex h-11 items-center gap-1 rounded-xl border border-stone-300 bg-stone-50 pr-3 focus-within:border-emerald-700 focus-within:ring-2 focus-within:ring-emerald-700/20">
-                      <span className="sr-only">{label} percentage</span>
+                      <span className="sr-only">{t("{category} percentage", { category: label })}</span>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -342,14 +345,14 @@ function PriorityEditor({
                     </label>
                     <button
                       type="button"
-                      aria-label={`Remove ${label}`}
+                      aria-label={t("Remove {category}", { category: label })}
                       onClick={() => removeCategory(category)}
                       className="grid size-11 place-items-center rounded-xl text-stone-600 hover:bg-red-50 hover:text-red-800"
                     >
                       <X aria-hidden className="size-4" />
                     </button>
                     <details className="col-span-full rounded-xl bg-stone-50 px-3 py-2">
-                      <summary className="cursor-pointer py-1 text-sm font-medium text-emerald-900">Edit locations</summary>
+                      <summary className="cursor-pointer py-1 text-sm font-medium text-emerald-900">{t("Edit locations")}</summary>
                       {places.length < 5 && (
                         <GooglePlacePicker
                           categoryLabel={label}
@@ -363,20 +366,20 @@ function PriorityEditor({
                         />
                       )}
                       <label className="mt-2 block text-sm text-stone-700">
-                        {label} locations
+                        {t("{category} locations", { category: label })}
                         <textarea
                           rows={2}
                           value={locationText}
                           maxLength={10244}
-                          placeholder="Place name, address, or Google Maps link"
+                          placeholder={t("Place name, address, or Google Maps link")}
                           onChange={(event) => updateLocations(category, event.target.value)}
                           className="mt-1 block w-full rounded-lg border border-stone-300 bg-white p-2 text-base"
                         />
                       </label>
-                      <p className="mt-1 text-xs text-stone-600">Up to 5 places, one per line. Leave blank for any nearby location.</p>
+                      <p className="mt-1 text-xs text-stone-600">{t("Up to 5 places, one per line. Leave blank for any nearby location.")}</p>
                       {places.filter(isGoogleMapsLink).map((place, index) => (
                         <a key={index} href={place} target="_blank" rel="noopener noreferrer" className="mt-2 block text-sm text-emerald-800 underline">
-                          Open map location {index + 1}
+                          {t("Open map location {index}", { index: index + 1 })}
                         </a>
                       ))}
                     </details>
@@ -389,24 +392,24 @@ function PriorityEditor({
       {!message && (rows.length > 0 || changed || status !== "idle") && (
           <div className="border-t border-stone-200 bg-stone-50 px-5 py-4 sm:px-6">
             {status === "error" || status === "conflict" ? (
-              <p role="alert" className="mb-3 text-sm text-red-800">{error}</p>
+              <p role="alert" className="mb-3 text-sm text-red-800">{t(error)}</p>
             ) : (
               <p role="status" className="mb-3 text-sm text-stone-600">
-                {status === "saved" ? "Priorities saved." :
-                  limitMessage ||
-                  (total > 100 ? `Remove ${total - 100}% to reach 100%.` :
-                    !locationsValid ? "Enter up to five locations per category using place names, addresses, or Google Maps links." :
-                      !percentagesValid ? "Enter a percentage from 1 to 100, or leave it blank." :
-                        !resolvedWeights ? "Lower another weight to leave at least 1% for each blank category." :
-                          hasBlankWeights ? `${100 - total}% will be assigned to blank categories on save.` :
-                            total < 100 ? `${100 - total}% left to allocate.` : "100% allocated.")}
+                {status === "saved" ? t("Priorities saved.") :
+                  t(limitMessage) ||
+                  (total > 100 ? t("Remove {percent}% to reach 100%.", { percent: total - 100 }) :
+                    !locationsValid ? t("Enter up to five locations per category using place names, addresses, or Google Maps links.") :
+                      !percentagesValid ? t("Enter a percentage from 1 to 100, or leave it blank.") :
+                        !resolvedWeights ? t("Lower another weight to leave at least 1% for each blank category.") :
+                          hasBlankWeights ? t("{percent}% will be assigned to blank categories on save.", { percent: 100 - total }) :
+                            total < 100 ? t("{percent}% left to allocate.", { percent: 100 - total }) : t("100% allocated."))}
               </p>
             )}
             {status === "conflict" ? (
-              <button type="button" onClick={reload} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">Reload saved priorities</button>
+              <button type="button" onClick={reload} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">{t("Reload saved priorities")}</button>
             ) : (
               <button type="submit" disabled={!canSave || busy} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:bg-stone-200 disabled:text-stone-600">
-                {status === "saving" ? "Saving…" : "Save priorities"}
+                {t(status === "saving" ? "Saving…" : "Save priorities")}
               </button>
             )}
           </div>
@@ -426,22 +429,22 @@ function PriorityEditor({
               disabled={busy}
               className="min-h-11 rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Reset profile
+              {t("Reset profile")}
             </AlertDialog.Trigger>
             <AlertDialog.Portal>
               <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-stone-950/50" />
               <AlertDialog.Popup className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 text-stone-900 shadow-xl">
-                <AlertDialog.Title className="text-lg font-semibold">Reset your housing profile?</AlertDialog.Title>
+                <AlertDialog.Title className="text-lg font-semibold">{t("Reset your housing profile?")}</AlertDialog.Title>
                 <AlertDialog.Description className="mt-2 text-sm text-stone-600">
-                  This clears your saved housing details, lifestyle priorities, and any unsaved edits. Your next LINE message starts a fresh intake.
+                  {t("This clears your saved housing details, lifestyle priorities, and any unsaved edits. Your next LINE message starts a fresh intake.")}
                 </AlertDialog.Description>
-                {resetError && <p role="alert" className="mt-3 text-sm text-red-800">{resetError}</p>}
+                {resetError && <p role="alert" className="mt-3 text-sm text-red-800">{t(resetError)}</p>}
                 <div className="mt-5 flex justify-end gap-2">
                   <AlertDialog.Close type="button" disabled={resetting} className="min-h-11 rounded-xl border border-stone-300 px-4 text-sm font-semibold hover:bg-stone-100 disabled:opacity-50">
-                    Cancel
+                    {t("Cancel")}
                   </AlertDialog.Close>
                   <button type="button" disabled={resetting} onClick={resetProfile} className="min-h-11 rounded-xl bg-red-800 px-4 text-sm font-semibold text-white hover:bg-red-900 disabled:opacity-50">
-                    {resetting ? "Resetting…" : "Reset profile"}
+                    {t(resetting ? "Resetting…" : "Reset profile")}
                   </button>
                 </div>
               </AlertDialog.Popup>
@@ -451,8 +454,8 @@ function PriorityEditor({
       )}
       {message && (
         <div className="px-5 py-5 sm:px-6">
-          <p className="text-sm text-stone-600" role="status">{message}</p>
-          {signIn && <button type="button" onClick={signIn} className="mt-4 rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">Sign in with LINE</button>}
+          <p className="text-sm text-stone-600" role="status">{t(message)}</p>
+          {signIn && <button type="button" onClick={signIn} className="mt-4 rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">{t("Sign in with LINE")}</button>}
         </div>
       )}
     </form>

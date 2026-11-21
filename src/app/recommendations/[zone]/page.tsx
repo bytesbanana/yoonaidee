@@ -1,12 +1,13 @@
+import { pageTitles } from "@/lib/i18n";
 import { Suspense } from "react";
-import type { Metadata } from "next";
+import Loading from "./loading";
 import { ZoneAnalysis } from "./zone-analysis";
 
-export const metadata: Metadata = { title: "Zone analysis | Yoo Nai Dee" };
+export const metadata = { title: pageTitles.zone };
 
 export default function ZonePage() {
   return (
-    <Suspense fallback={<p role="status">Loading zone analysis…</p>}>
+    <Suspense fallback={<Loading />}>
       <ZoneAnalysis />
     </Suspense>
   );

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { useLanguage } from "../providers/language-provider";
 
 const bangkokScenes = ["city-street", "neighborhood-lane", "riverside"];
 
@@ -7,6 +8,7 @@ export function ZoneArtwork({ index, rank, detail = false }: {
   rank: number;
   detail?: boolean;
 }) {
+  const { t } = useLanguage();
   const scene = bangkokScenes[index % bangkokScenes.length];
 
   return (
@@ -20,10 +22,10 @@ export function ZoneArtwork({ index, rank, detail = false }: {
         className="object-cover"
       />
       <span className="absolute top-3 left-3 inline-flex items-center rounded-full bg-[#163a2f] px-3 py-1.5 text-sm font-semibold text-white">
-        Rank {rank}
+        {t("Rank {rank}", { rank })}
       </span>
       <span className="absolute right-3 bottom-3 rounded-md bg-[#163a2f] px-2 py-1 text-xs text-white">
-        Bangkok illustration
+        {t("Bangkok illustration")}
       </span>
     </div>
   );

@@ -24,27 +24,20 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const id = params.get("result");
 
-    if (id === null && params.get("view") === "history") {
-      const { rows } = await intakePool.query(
-        `SELECT ${summaryColumns} ${ownedResults} ${newestFirst} OFFSET 1`,
-        [user.userId],
-      );
-      return json({ history: rows });
-    }
-
     if (id !== null && !z.uuid().safeParse(id).success) {
       return json({ error: "This analysis result is unavailable." }, 404);
     }
 
     const { rows: [row] } = await intakePool.query(
       `SELECT ${summaryColumns}, r.result_schema_version, r.result_data
-       ${ownedResults} ${id === null ? "" : "AND r.id = $2"} ${newestFirst} LIMIT 1`,
-      id === null ? [user.userId] : [user.userId, id],
+       ${ownedResults} ${newestFirst} LIMIT 1`,
+      [user.userId],
     );
 
-    if (!row) {
-      return id === null ? json({ analysis: null }) : json({ error: "This analysis result is unavailable." }, 404);
+    if (id !== null && row?.id !== id.toLowerCase()) {
+      return json({ error: "This analysis result is unavailable." }, 404);
     }
+    if (!row) return json({ analysis: null });
 
     const parsed = resultSchema.safeParse(row.result_data);
     if (row.result_schema_version !== 1 || !parsed.success) {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ProfileLoading from "../profile/loading";
 import { ProfileView } from "../profile/profile-view";
+import { useLanguage } from "../providers/language-provider";
 import { useLiff } from "../providers/LiffProvider";
 import { hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
 import { formatHousingType, formatPriorityCategory, formatPriorityLocation, formatTransport } from "@/lib/preferences/display";
@@ -28,6 +29,7 @@ type View =
   | { status: "loaded"; settings: Settings | null; profile: LineProfile | null };
 
 export function SettingsView({ showProfile = false }: { showProfile?: boolean }) {
+  const { language, locale, t } = useLanguage();
   const { liffObject, liffError, isReady } = useLiff();
   const [view, setView] = useState<View>({ status: "loading" });
 
@@ -82,13 +84,13 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
   const categories = settings?.categories ?? [];
   const total = categories.reduce((sum, { weight }) => sum + (weight ?? 0), 0);
   const complete = hasCompleteWeights(categories);
-  const preferredModes = settings?.preferredModes.map(formatTransport).filter(Boolean);
-  const transport = preferredModes?.join(", ") || (settings?.transport && formatTransport(settings.transport));
+  const preferredModes = settings?.preferredModes.map((mode) => formatTransport(mode, language)).filter(Boolean);
+  const transport = preferredModes?.join(", ") || (settings?.transport && formatTransport(settings.transport, language));
   const housingDetails: [string, string | null | undefined][] = [
-    ["Destination", settings?.destination && normalizeLocation(settings.destination)],
-    ["Monthly Rent Ceiling", settings?.budget ? `฿${settings.budget.toLocaleString("en-TH")}` : null],
-    ["Transport", transport],
-    ["Housing Types", settings?.housing.map(formatHousingType).filter(Boolean).join(", ")],
+    [t("Destination"), settings?.destination && normalizeLocation(settings.destination)],
+    [t("Monthly Rent Ceiling"), settings?.budget ? `฿${settings.budget.toLocaleString(locale)}` : null],
+    [t("Transport"), transport],
+    [t("Housing Types"), settings?.housing.map((type) => formatHousingType(type, language)).filter(Boolean).join(", ")],
   ];
   const signIn = () => liffObject?.login({ redirectUri: window.location.href });
   if (showProfile) {
@@ -114,43 +116,43 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
   const details = housingDetails.filter(([, value]) => value);
 
   return (
-    <main className="min-h-screen bg-stone-100 px-5 py-10 text-stone-900 sm:py-16">
+    <main className="flex-1 bg-stone-100 px-5 py-10 text-stone-900 sm:py-16">
       <div className="mx-auto max-w-2xl">
-        <p className="mb-3 text-sm font-semibold text-emerald-800">Yoo Nai Dee</p>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Housing preferences</h1>
-        <p className="mt-3 text-sm text-stone-600">Update your preferences in the Yoo Nai Dee LINE chat.</p>
+        <p className="mb-3 text-sm font-semibold text-emerald-800">{t("Yoo Nai Dee")}</p>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t("Housing preferences")}</h1>
+        <p className="mt-3 text-sm text-stone-600">{t("Update your preferences in the Yoo Nai Dee LINE chat.")}</p>
 
-        {liffError && <p className="mt-8 rounded-xl bg-white p-5" role="alert">Could not start LINE sign-in.</p>}
-        {!liffError && view.status === "loading" && <p className="mt-8" role="status">Loading your preferences…</p>}
-        {view.status === "error" && <p className="mt-8 rounded-xl bg-white p-5" role="alert">{view.message}</p>}
+        {liffError && <p className="mt-8 rounded-xl bg-white p-5" role="alert">{t("Could not start LINE sign-in.")}</p>}
+        {!liffError && view.status === "loading" && <p className="mt-8" role="status">{t("Loading your preferences…")}</p>}
+        {view.status === "error" && <p className="mt-8 rounded-xl bg-white p-5" role="alert">{t(view.message)}</p>}
         {view.status === "sign-in" && (
           <button
             className="mt-8 rounded-lg bg-emerald-800 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-900"
             onClick={signIn}
           >
-            Sign in with LINE
+            {t("Sign in with LINE")}
           </button>
         )}
 
         {view.status === "loaded" && categories.length === 0 && details.length === 0 && (
-          <p className="mt-8 rounded-xl bg-white p-5">No housing preferences saved yet. Tell us what you’re looking for in the Yoo Nai Dee LINE chat.</p>
+          <p className="mt-8 rounded-xl bg-white p-5">{t("No housing preferences saved yet. Tell us what you’re looking for in the Yoo Nai Dee LINE chat.")}</p>
         )}
         {categories.length > 0 && (
           <section aria-labelledby="priorities" className="mt-8 rounded-2xl border border-stone-200 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 px-5 py-4">
-              <h2 id="priorities" className="text-lg font-semibold">Location priorities</h2>
+              <h2 id="priorities" className="text-lg font-semibold">{t("Location priorities")}</h2>
               <span className={complete ? "text-sm font-semibold text-emerald-800" : "text-sm font-medium text-amber-800"}>
-                {total}% {complete ? "total" : "allocated · in progress"}
+                {t(complete ? "{total}% total" : "{total}% allocated · in progress", { total })}
               </span>
             </div>
             <ul className="divide-y divide-stone-100">
               {categories.map(({ category, places, weight }) => (
                 <li key={category} className="flex items-start justify-between gap-4 px-5 py-4">
                   <div>
-                    <p className="font-medium">{formatPriorityCategory(category)}</p>
-                    <p className="mt-1 text-sm text-stone-600">{places.length ? places.map(formatPriorityLocation).join(" · ") : "Any Nearby"}</p>
+                    <p className="font-medium">{formatPriorityCategory(category, language)}</p>
+                    <p className="mt-1 text-sm text-stone-600">{places.length ? places.map((place) => formatPriorityLocation(place, language)).join(" · ") : t("Any Nearby")}</p>
                   </div>
-                  <span className="shrink-0 text-sm tabular-nums">{weight === null ? "Pending" : `${weight}%`}</span>
+                  <span className="shrink-0 text-sm tabular-nums">{weight === null ? t("Pending") : `${weight}%`}</span>
                 </li>
               ))}
             </ul>
