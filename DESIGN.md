@@ -29,15 +29,14 @@ Spacing scale: Tailwind default (`p-4`, `p-6`, `gap-2`, `gap-4`). Type scale: `t
 
 ### Homepage
 
-- Use a Bangkok hero image, a forest-green accent, and two clearly labeled navigation cards.
-- Stack the image and navigation cards at phone widths. Pair the hero copy with the image on wider screens.
-- Link **Profile** to `/profile` and **Current Lifestyle Optimization** to `/recommendations`.
+- Put the short-stay promise and **Plan a stay** action before the Bangkok hero image on phones.
+- Provide secondary access to **Past searches** and **Your profile**.
 
-### Recommendations page
+### Stay planner
 
-- Show five demo zone cards with illustrative photography. Each card opens a zone page with sample properties and a link back to the list. Show a photo, monthly rent, floor area, and amenities on each property card.
-- Use Current and History navigation tabs. List older versions newest first and preserve the selected version when going back from a zone.
-
+- Ask for the work location, stay dates, and total rent budget. Offer to reuse existing LINE preferences when the user has signed in.
+- Put estimated base rent, lease and availability status, and commute actions above the photos on mobile. State the estimate basis and distinguish sample data on both the shortlist and listing pages.
+- Keep past searches on the same browser. Label each search by work location and stay dates, and preserve the search when returning from a listing.
 
 ### Profile page
 

@@ -38,7 +38,7 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 
 **Not in MVP:** Nationwide coverage, multi-agent debate, real-time BTS timing without a valid source, complex auth, sophisticated analytics, Redis/Kafka/S3, production-scale infrastructure.
 
-The web demo at `/recommendations` shows five sample Bangkok zones in a fixed order. Each zone opens a detail page with fictional condos, apartments or homes in housing villages. Each example includes an illustrative property photo, sample monthly rent in THB, floor area in square meters, and amenities. The History view opens dated demo versions with their saved zone rankings.
+The web planner at `/recommendations` compares sample Bangkok areas for a work location, dates, and a whole-stay rent budget. The shortlist ranks fictional base-rent estimates prorated over 30 nights, links to area-level directions, and labels lease terms, availability, and move-in costs as unconfirmed or unknown. Users can reuse saved LINE preferences. The browser stores up to 20 recent searches; planning another stay carries forward the previous budget. This preview uses the existing fixtures while the separate analysis worker implements personalized results.
 
 ## 5. User journey
 

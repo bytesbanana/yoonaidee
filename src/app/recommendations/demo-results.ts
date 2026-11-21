@@ -1,12 +1,5 @@
 import { DEMO_ZONES } from "./demo-zones";
 
-export const CURRENT_RESULT = {
-  date: "2026-11-21",
-  version: 3,
-  focus: "Balanced Commute and Lifestyle",
-  zones: DEMO_ZONES,
-};
-
 const PAST_RESULTS = [
   {
     date: "2026-11-14",
@@ -33,11 +26,4 @@ export const RESULT_HISTORY = PAST_RESULTS.map(({ rankedZones, ...result }) => (
 
 export function findPastResult(version: string | string[] | undefined) {
   return RESULT_HISTORY.find((result) => String(result.version) === version);
-}
-
-export function formatResultDate(date: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeZone: "Asia/Bangkok",
-  }).format(new Date(date));
 }

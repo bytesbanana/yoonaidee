@@ -6,6 +6,7 @@ import { useLiff } from "../providers/LiffProvider";
 import { hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
 import { formatHousingType, formatPriorityCategory, formatPriorityLocation, formatTransport } from "@/lib/preferences/display";
 import { normalizeLocation } from "@/lib/preferences/locations";
+import { lineAuthHeaders } from "@/lib/line/liff-auth";
 
 type Settings = {
   sessionId: string;
@@ -24,14 +25,6 @@ type View =
   | { status: "loading" | "sign-in" }
   | { status: "error"; message: string }
   | { status: "loaded"; settings: Settings | null; profile: LineProfile | null };
-
-function lineAuthHeaders(liff: ReturnType<typeof useLiff>["liffObject"]): Record<string, string> | null {
-  const idToken = liff?.getIDToken();
-  if (idToken) return { Authorization: `Bearer ${idToken}` };
-  const accessToken = liff?.getAccessToken();
-  if (accessToken) return { Authorization: `Bearer ${accessToken}`, "X-Line-Token-Type": "access" };
-  return null;
-}
 
 export function SettingsView({ showProfile = false }: { showProfile?: boolean }) {
   const { liffObject, liffError, isReady } = useLiff();
