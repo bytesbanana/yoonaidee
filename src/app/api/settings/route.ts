@@ -3,6 +3,8 @@ import { z } from "zod";
 import { categoryId, preferenceCategories } from "@/lib/preferences/categories";
 
 const verifiedToken = z.object({ sub: z.string().min(1) });
+const verifiedAccessToken = z.object({ client_id: z.string(), expires_in: z.number() });
+const lineProfile = z.object({ userId: z.string().min(1) });
 const storedProfile = z.object({
   categories: preferenceCategories.optional(),
   budget: z.object({ maxMonthlyRent: z.number().positive().nullable() }).optional(),
@@ -40,15 +42,32 @@ async function authenticate(request: Request) {
     return json({ error: "Sign in with LINE to access your settings." }, 401);
   }
 
-  const verification = await fetch("https://api.line.me/oauth2/v2.1/verify", {
+  const verifyUrl = "https://api.line.me/oauth2/v2.1/verify";
+  const options = { signal: AbortSignal.timeout(5000), cache: "no-store" as const };
+  const unauthorized = () => json({ error: "Sign in with LINE again to access your preferences." }, 401);
+  if (request.headers.get("x-line-token-type") === "access") {
+    const query = new URLSearchParams({ access_token: token });
+    const verification = await fetch(`${verifyUrl}?${query}`, options);
+    if (verification.status === 400 || verification.status === 401) return unauthorized();
+    if (!verification.ok) throw new Error("LINE verification unavailable");
+    const { client_id, expires_in } = verifiedAccessToken.parse(await verification.json());
+    if (client_id !== channelId || expires_in <= 0) return unauthorized();
+
+    const profile = await fetch("https://api.line.me/v2/profile", {
+      ...options,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (profile.status === 401 || profile.status === 403) return unauthorized();
+    if (!profile.ok) throw new Error("LINE profile unavailable");
+    return lineProfile.parse(await profile.json()).userId;
+  }
+
+  const verification = await fetch(verifyUrl, {
+    ...options,
     method: "POST",
     body: new URLSearchParams({ id_token: token, client_id: channelId }),
-    signal: AbortSignal.timeout(5000),
-    cache: "no-store",
   });
-  if (verification.status === 400 || verification.status === 401) {
-    return json({ error: "Your LINE session has expired. Sign in again." }, 401);
-  }
+  if (verification.status === 400 || verification.status === 401) return unauthorized();
   if (!verification.ok) throw new Error("LINE verification unavailable");
   return verifiedToken.parse(await verification.json()).sub;
 }
@@ -89,6 +108,14 @@ export async function GET(request: Request) {
   }
 }
 
+function savedPriorities(session: Session) {
+  return {
+    sessionId: session.id,
+    version: session.profile_version,
+    categories: storedProfile.parse(session.preferences).categories ?? [],
+  };
+}
+
 export async function PATCH(request: Request) {
   try {
     const user = await authenticate(request);
@@ -110,14 +137,14 @@ export async function PATCH(request: Request) {
       const created = await intakeTransaction(async (client) => {
         await client.query("INSERT INTO users (line_user_id) VALUES ($1) ON CONFLICT DO NOTHING", [user]);
         const categories = weights.map((item) => ({ ...item, places: [] }));
-        const { rows: [inserted] } = await client.query<{ id: string; profile_version: number }>(
+        const { rows: [inserted] } = await client.query<Session>(
           `INSERT INTO conversation_sessions (user_id, preferences, profile_version)
            SELECT id, $2::jsonb, 1 FROM users WHERE line_user_id = $1
            ON CONFLICT (user_id) WHERE closed_at IS NULL DO NOTHING
-           RETURNING id, profile_version`,
+           RETURNING id, profile_version, preferences`,
           [user, JSON.stringify({ categories })],
         );
-        return inserted ? { sessionId: inserted.id, version: inserted.profile_version, categories } : null;
+        return inserted ? savedPriorities(inserted) : null;
       });
       return created ? json(created) : conflict();
     }
@@ -127,17 +154,17 @@ export async function PATCH(request: Request) {
     const { categories = [] } = storedProfile.parse(session.preferences);
     const placesByCategory = new Map(categories.map(({ category, places }) => [category, places]));
     const updated = weights.map((item) => ({ ...item, places: placesByCategory.get(item.category) ?? [] }));
-    const { rows: [saved] } = await intakePool.query<{ profile_version: number }>(
+    const { rows: [saved] } = await intakePool.query<Session>(
       `UPDATE conversation_sessions
        SET preferences = jsonb_set(preferences, '{categories}', $3::jsonb),
            profile_version = profile_version + 1,
            updated_at = now()
        WHERE id = $1 AND profile_version = $2 AND closed_at IS NULL
-       RETURNING profile_version`,
+       RETURNING id, profile_version, preferences`,
       [sessionId, version, JSON.stringify(updated)],
     );
     if (!saved) return conflict();
-    return json({ sessionId, categories: updated, version: saved.profile_version });
+    return json(savedPriorities(saved));
   } catch {
     console.error("line.settings.write_failed");
     return json({ error: "Could not save your priorities. Try again shortly." }, 503);

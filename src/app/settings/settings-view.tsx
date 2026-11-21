@@ -23,6 +23,14 @@ type View =
   | { status: "error"; message: string }
   | { status: "loaded"; settings: Settings | null; profile: LineProfile | null };
 
+function lineAuthHeaders(liff: ReturnType<typeof useLiff>["liffObject"]): Record<string, string> | null {
+  const idToken = liff?.getIDToken();
+  if (idToken) return { Authorization: `Bearer ${idToken}` };
+  const accessToken = liff?.getAccessToken();
+  if (accessToken) return { Authorization: `Bearer ${accessToken}`, "X-Line-Token-Type": "access" };
+  return null;
+}
+
 export function SettingsView({ showProfile = false }: { showProfile?: boolean }) {
   const { liffObject, liffError, isReady } = useLiff();
   const [view, setView] = useState<View>({ status: "loading" });
@@ -40,19 +48,19 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
           update({ status: "sign-in" });
           return;
         }
-        const token = liff.getIDToken();
+        const headers = lineAuthHeaders(liff);
         const lineProfile = showProfile ? liff.getProfile().catch(() => null) : null;
-        if (!token) {
+        if (!headers) {
           if (showProfile) {
             update({ status: "loaded", settings: null, profile: await lineProfile });
           } else {
-            update({ status: "error", message: "LINE did not provide an ID token. Open this page again from the LINE menu." });
+            update({ status: "error", message: "Sign in with LINE again to load your preferences." });
           }
           return;
         }
         const [response, profile] = await Promise.all([
           fetch("/api/settings", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers,
             cache: "no-store",
             signal: controller.signal,
           }),
@@ -99,7 +107,7 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
         details={housingDetails}
         message={message}
         signIn={view.status === "sign-in" ? signIn : undefined}
-        getToken={() => liffObject?.getIDToken()}
+        getAuthHeaders={() => lineAuthHeaders(liffObject)}
         reload={() => window.location.reload()}
       />
     );

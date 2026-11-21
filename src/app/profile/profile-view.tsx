@@ -31,7 +31,7 @@ export function ProfileView({
   details,
   message,
   signIn,
-  getToken,
+  getAuthHeaders,
   reload,
 }: {
   profile: { displayName: string; pictureUrl?: string } | null;
@@ -39,7 +39,7 @@ export function ProfileView({
   details: [string, string | null | undefined][];
   message?: string;
   signIn?: () => void;
-  getToken: () => string | null | undefined;
+  getAuthHeaders: () => Record<string, string> | null;
   reload: () => void;
 }) {
   return (
@@ -62,7 +62,7 @@ export function ProfileView({
           priorities={priorities}
           message={message}
           signIn={signIn}
-          getToken={getToken}
+          getAuthHeaders={getAuthHeaders}
           reload={reload}
         />
 
@@ -90,13 +90,13 @@ function PriorityEditor({
   priorities,
   message,
   signIn,
-  getToken,
+  getAuthHeaders,
   reload,
 }: {
   priorities: Priorities | null;
   message?: string;
   signIn?: () => void;
-  getToken: () => string | null | undefined;
+  getAuthHeaders: () => Record<string, string> | null;
   reload: () => void;
 }) {
   const [saved, setSaved] = useState(priorities);
@@ -146,9 +146,9 @@ function PriorityEditor({
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!valid || !changed || busy || message) return;
-    const token = getToken();
-    if (!token) {
-      setError("Open this page from LINE to save your priorities.");
+    const headers = getAuthHeaders();
+    if (!headers) {
+      setError("Sign in with LINE again to save your priorities.");
       setStatus("error");
       return;
     }
@@ -157,7 +157,7 @@ function PriorityEditor({
     try {
       const response = await fetch("/api/settings", {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: saved?.sessionId ?? null,
           version: saved?.version ?? null,
