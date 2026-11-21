@@ -3,7 +3,7 @@ import { DEMO_ZONES } from "./demo-zones";
 export const CURRENT_RESULT = {
   date: "2026-11-21",
   version: 3,
-  focus: "Balanced commute and lifestyle",
+  focus: "Balanced Commute and Lifestyle",
   zones: DEMO_ZONES,
 };
 
@@ -11,13 +11,13 @@ const PAST_RESULTS = [
   {
     date: "2026-11-14",
     version: 2,
-    focus: "Shorter commute",
+    focus: "Shorter Commute",
     rankedZones: ["sathorn", "phra-khanong", "on-nut", "ari", "lat-phrao"],
   },
   {
     date: "2026-11-07",
     version: 1,
-    focus: "Lower monthly rent",
+    focus: "Lower Monthly Rent",
     rankedZones: ["on-nut", "lat-phrao", "phra-khanong", "ari", "sathorn"],
   },
 ];

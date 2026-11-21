@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { ProfileView } from "../profile/profile-view";
 import { useLiff } from "../providers/LiffProvider";
-import { categoryLabel, hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
+import { hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
+import { formatHousingType, formatPriorityCategory, formatPriorityLocation, formatTransport } from "@/lib/preferences/display";
+import { normalizeLocation } from "@/lib/preferences/locations";
 
 type Settings = {
   sessionId: string;
@@ -86,12 +88,13 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
   const categories = settings?.categories ?? [];
   const total = categories.reduce((sum, { weight }) => sum + (weight ?? 0), 0);
   const complete = hasCompleteWeights(categories);
-  const transport = settings?.preferredModes.join(", ") || settings?.transport?.replaceAll("_", " ");
+  const preferredModes = settings?.preferredModes.map(formatTransport).filter(Boolean);
+  const transport = preferredModes?.join(", ") || (settings?.transport && formatTransport(settings.transport));
   const housingDetails: [string, string | null | undefined][] = [
-    ["Destination", settings?.destination],
-    ["Monthly rent ceiling", settings?.budget ? `฿${settings.budget.toLocaleString("en-TH")}` : null],
+    ["Destination", settings?.destination && normalizeLocation(settings.destination)],
+    ["Monthly Rent Ceiling", settings?.budget ? `฿${settings.budget.toLocaleString("en-TH")}` : null],
     ["Transport", transport],
-    ["Housing types", settings?.housing.join(", ")],
+    ["Housing Types", settings?.housing.map(formatHousingType).filter(Boolean).join(", ")],
   ];
   const signIn = () => liffObject?.login({ redirectUri: window.location.href });
   if (showProfile) {
@@ -149,8 +152,8 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
               {categories.map(({ category, places, weight }) => (
                 <li key={category} className="flex items-start justify-between gap-4 px-5 py-4">
                   <div>
-                    <p className="font-medium">{categoryLabel(category)}</p>
-                    <p className="mt-1 text-sm text-stone-600">{places.length ? places.join(" · ") : "Any nearby"}</p>
+                    <p className="font-medium">{formatPriorityCategory(category)}</p>
+                    <p className="mt-1 text-sm text-stone-600">{places.length ? places.map(formatPriorityLocation).join(" · ") : "Any Nearby"}</p>
                   </div>
                   <span className="shrink-0 text-sm tabular-nums">{weight === null ? "Pending" : `${weight}%`}</span>
                 </li>

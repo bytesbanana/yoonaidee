@@ -7,7 +7,6 @@ import {
   categoryFromName,
   categoryId,
   categoryKey,
-  categoryLabel,
   maxCustomCategoryNameLength,
   maxPreferenceCategories,
   profileCategoryPresets,
@@ -15,6 +14,9 @@ import {
   preferencePlaces,
   type PreferenceCategory,
 } from "@/lib/preferences/categories";
+import { capitalizeWords } from "@/lib/format-text";
+import { formatPriorityCategory, formatPriorityLocation } from "@/lib/preferences/display";
+import { normalizeCategoryLocations } from "@/lib/preferences/locations";
 
 type Category = PreferenceCategory["category"];
 
@@ -72,9 +74,9 @@ export function ProfileView({
         />
 
         <section aria-labelledby="housing-details" className="mt-5 rounded-3xl border border-stone-200 bg-white px-5 py-5 sm:px-6">
-          <h2 id="housing-details" className="text-base font-semibold">Profile details</h2>
+          <h2 id="housing-details" className="text-base font-semibold">Profile Details</h2>
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
-            {[["LINE display name", profile?.displayName], ...details].map(([label, value]) => (
+            {[["LINE Display Name", profile?.displayName && capitalizeWords(profile.displayName)], ...details].map(([label, value]) => (
               <div key={label} className="min-w-0">
                 <dt className="text-xs text-stone-600">{label}</dt>
                 <dd className="mt-1 break-words text-sm font-medium">{value || "—"}</dd>
@@ -88,7 +90,7 @@ export function ProfileView({
 }
 
 function toRows(categories: PreferenceCategory[]) {
-  return categories.map(({ category, places, weight }) => ({ category, locationText: places.join("\n"), value: weight?.toString() ?? "" }));
+  return categories.map(({ category, places, weight }) => ({ category, locationText: normalizeCategoryLocations(places).join("\n"), value: weight?.toString() ?? "" }));
 }
 
 function locationsFromText(value: string) {
@@ -119,10 +121,10 @@ function PriorityEditor({
   const total = rows.reduce((sum, { value }) => sum + Number(value), 0);
   const locationsValid = rows.every(({ locationText }) => preferencePlaces.safeParse(locationsFromText(locationText)).success);
   const valid = rows.every(({ value }) => !value || Number(value) >= 1) && total <= 100 && locationsValid;
-  const previous = saved?.categories ?? [];
+  const previous = toRows(saved?.categories ?? []);
   const changed = rows.length !== previous.length || rows.some(({ category, value, locationText }, index) =>
-    previous[index]?.category !== category || previous[index]?.weight !== (value ? Number(value) : null)
-    || previous[index]?.places.join("\n") !== locationsFromText(locationText).join("\n"),
+    previous[index]?.category !== category || Number(previous[index]?.value) !== Number(value)
+    || previous[index]?.locationText !== locationsFromText(locationText).join("\n"),
   );
   const usedCategories = new Set(rows.map(({ category }) => categoryKey(category)));
   const available = profileCategoryPresets.filter((category) => !usedCategories.has(categoryKey(category)));
@@ -151,7 +153,7 @@ function PriorityEditor({
   function addCategory() {
     if (!canAdd) return;
     const original = previous.find(({ category }) => categoryKey(category) === categoryKey(candidate));
-    setRows((current) => [...current, { category: candidate, locationText: original?.places.join("\n") ?? "", value: "" }]);
+    setRows((current) => [...current, { category: candidate, locationText: original?.locationText ?? "", value: "" }]);
     setSelected("");
     setCustomName("");
     setPickerOpen(false);
@@ -236,7 +238,7 @@ function PriorityEditor({
                     className="mt-1 block h-11 w-full rounded-xl border border-stone-300 bg-white px-2 text-base"
                   >
                     <option value="">Choose a category</option>
-                    {available.map((category) => <option key={category} value={category}>{categoryLabel(category)}</option>)}
+                    {available.map((category) => <option key={category} value={category}>{formatPriorityCategory(category)}</option>)}
                     <option value="custom">Custom category</option>
                   </select>
                 </label>
@@ -266,10 +268,10 @@ function PriorityEditor({
           {rows.length === 0 && <p className="px-5 py-5 text-sm text-stone-600 sm:px-6">No categories selected.</p>}
             <ul className="divide-y divide-stone-100 px-5 sm:px-6">
               {rows.map(({ category, locationText, value }) => {
-                const label = categoryLabel(category);
+                const label = formatPriorityCategory(category);
                 const Icon = categoryIcons[category] ?? MapPin;
                 const places = locationsFromText(locationText);
-                const locationLabel = places.map((place) => isGoogleMapsLink(place) ? "Google Maps location" : place).join(" · ");
+                const locationLabel = places.map(formatPriorityLocation).join(" · ");
                 return (
                   <li key={category} className="grid grid-cols-[minmax(0,1fr)_4.75rem_2.75rem] items-center gap-2 sm:gap-3 py-4">
                     <div className="flex min-w-0 items-start gap-3">
@@ -278,7 +280,7 @@ function PriorityEditor({
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="break-words font-semibold leading-tight">{label}</p>
-                        <p className="mt-1 break-words text-xs text-stone-600">{locationLabel || "Any nearby"}</p>
+                        <p className="mt-1 break-words text-xs text-stone-600">{locationLabel || "Any Nearby"}</p>
                         <div aria-hidden className="mt-2 h-1.5 max-w-48 overflow-hidden rounded-full bg-stone-100">
                           <div className="h-full rounded-full bg-emerald-600" style={{ width: `${Number(value)}%` }} />
                         </div>
