@@ -38,8 +38,13 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
           return;
         }
         const token = liff.getIDToken();
+        const lineProfile = showProfile ? liff.getProfile().catch(() => null) : null;
         if (!token) {
-          update({ status: "error", message: "LINE did not provide an ID token. Open this page again from the LINE menu." });
+          if (showProfile) {
+            update({ status: "loaded", settings: null, profile: await lineProfile });
+          } else {
+            update({ status: "error", message: "LINE did not provide an ID token. Open this page again from the LINE menu." });
+          }
           return;
         }
         const [response, profile] = await Promise.all([
@@ -48,7 +53,7 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
             cache: "no-store",
             signal: controller.signal,
           }),
-          showProfile ? liff.getProfile().catch(() => null) : null,
+          lineProfile,
         ]);
         const result = await response.json();
         if (!response.ok) {
@@ -71,12 +76,15 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
   const total = categories.reduce((sum, { weight }) => sum + (weight ?? 0), 0);
   const complete = hasCompleteWeights(categories);
   const transport = settings?.preferredModes.join(", ") || settings?.transport?.replaceAll("_", " ");
-  const details = [
+  const housingDetails = [
     ["Destination", settings?.destination],
     ["Monthly rent ceiling", settings?.budget ? `฿${settings.budget.toLocaleString("en-TH")}` : null],
     ["Transport", transport],
     ["Housing types", settings?.housing.join(", ")],
-  ].filter(([, value]) => value);
+  ];
+  const details = showProfile
+    ? [["LINE display name", profile?.displayName], ...housingDetails]
+    : housingDetails.filter(([, value]) => value);
 
   return (
     <main className="min-h-screen bg-stone-100 px-5 py-10 text-stone-900 sm:py-16">
@@ -91,7 +99,6 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               {showProfile ? "Your profile" : "Housing preferences"}
             </h1>
-            {profile && <p className="mt-1 text-stone-700">{profile.displayName}</p>}
           </div>
         </div>
         <p className="mt-3 text-sm text-stone-600">Update your preferences in the Yoo Nai Dee LINE chat.</p>
@@ -108,17 +115,20 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
           </button>
         )}
 
-        {view.status === "loaded" && categories.length === 0 && details.length === 0 && (
+        {!showProfile && view.status === "loaded" && categories.length === 0 && details.length === 0 && (
           <p className="mt-8 rounded-xl bg-white p-5">No housing preferences saved yet. Tell us what you’re looking for in the Yoo Nai Dee LINE chat.</p>
         )}
-        {categories.length > 0 && (
+        {(showProfile || categories.length > 0) && (
           <section aria-labelledby="priorities" className="mt-8 rounded-2xl border border-stone-200 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 px-5 py-4">
               <h2 id="priorities" className="text-lg font-semibold">Location priorities</h2>
-              <span className={complete ? "text-sm font-semibold text-emerald-800" : "text-sm font-medium text-amber-800"}>
-                {total}% {complete ? "total" : "allocated · in progress"}
-              </span>
+              {categories.length > 0 && (
+                <span className={complete ? "text-sm font-semibold text-emerald-800" : "text-sm font-medium text-amber-800"}>
+                  {total}% {complete ? "total" : "allocated · in progress"}
+                </span>
+              )}
             </div>
+            {categories.length === 0 && <p className="px-5 py-4 text-stone-600">—</p>}
             <ul className="divide-y divide-stone-100">
               {categories.map(({ category, places, weight }) => (
                 <li key={category} className="flex items-start justify-between gap-4 px-5 py-4">
@@ -137,7 +147,7 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
             {details.map(([label, value]) => (
               <div key={label}>
                 <dt className="text-sm text-stone-600">{label}</dt>
-                <dd className="mt-1 font-medium">{value}</dd>
+                <dd className="mt-1 font-medium">{value || "—"}</dd>
               </div>
             ))}
           </dl>
