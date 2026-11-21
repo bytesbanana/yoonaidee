@@ -124,7 +124,6 @@ const thai: Record<string, string> = {
   "This location is already listed or the category has five locations.": "มีสถานที่นี้ในรายการแล้ว หรือหมวดหมู่นี้มีครบ 5 แห่งแล้ว",
   "Google Maps search couldn’t load. You can still enter an address or paste a link.": "โหลดการค้นหาใน Google Maps ไม่ได้ คุณยังกรอกที่อยู่หรือวางลิงก์ได้",
   "Search Google Maps for {category}": "ค้นหา {category} ใน Google Maps",
-  "Open Google Maps to copy a link": "เปิด Google Maps เพื่อคัดลอกลิงก์",
   "Loading Google Maps search…": "กำลังโหลดการค้นหาใน Google Maps…",
   "Close Google Maps search": "ปิดการค้นหาใน Google Maps",
   "Choose from Google Maps": "เลือกจาก Google Maps",

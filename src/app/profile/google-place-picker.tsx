@@ -128,13 +128,7 @@ export function GooglePlacePicker({ categoryLabel, onSelect }: {
     if (picker instanceof HTMLElement) localizePicker(picker);
   }, [categoryLabel, language]);
 
-  if (!mapsKey) {
-    return (
-      <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="inline-block text-sm font-medium text-emerald-800 underline">
-        {t("Open Google Maps to copy a link")}
-      </a>
-    );
-  }
+  if (!mapsKey) return null;
 
   return (
     <div>
