@@ -6,9 +6,27 @@ const replyEvent = z.object({
   mode: z.literal("active").optional(),
   webhookEventId: z.string().min(1),
   replyToken: z.string().min(1),
-  source: z.object({ type: z.literal("user") }),
+  source: z.object({ type: z.literal("user"), userId: z.string().min(1).optional() }),
   message: z.object({ type: z.literal("text"), text: z.string() }),
 });
+
+async function startLoading(chatId: string, eventId: string, channelToken: string) {
+  try {
+    const response = await fetch("https://api.line.me/v2/bot/chat/loading/start", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${channelToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ chatId, loadingSeconds: 5 }),
+      signal: AbortSignal.timeout(1000),
+    });
+    if (!response.ok) {
+      console.warn("line.loading.failed", { eventId, httpStatus: response.status });
+    } else {
+      console.info("line.loading.accepted", { eventId });
+    }
+  } catch {
+    console.warn("line.loading.failed", { eventId, code: "TRANSPORT_ERROR" });
+  }
+}
 
 async function replyToMessage(event: z.infer<typeof replyEvent>, channelToken: string) {
   const language = /[ก-๙]/.test(event.message.text) ? "th" : "en";
@@ -67,7 +85,12 @@ export async function POST(request: Request) {
     return new Response("Webhook reply unavailable", { status: 503 });
   }
 
-  const replies = await Promise.all(messages.map((event) => replyToMessage(event, channelToken)));
+  const replies = await Promise.all(messages.map(async (event) => {
+    if (event.source.userId) {
+      await startLoading(event.source.userId, event.webhookEventId, channelToken);
+    }
+    return replyToMessage(event, channelToken);
+  }));
   if (replies.includes(false)) return new Response("LINE reply failed", { status: 502 });
   return new Response("OK");
 }
