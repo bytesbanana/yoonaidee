@@ -40,9 +40,20 @@ export const categoryLabels = {
 
 export const categoryId = z.enum(Object.keys(categoryLabels) as (keyof typeof categoryLabels)[]);
 
+const googleMapsLink = /^https:\/\/(?:maps\.app\.goo\.gl\/[^\s]+|goo\.gl\/maps\/[^\s]+|maps\.google\.com[/?][^\s]*|(?:www\.)?google\.com\/maps(?:[/?#][^\s]*)?)$/i;
+
+export function isGoogleMapsLink(value: string) {
+  return value.length <= 2048 && googleMapsLink.test(value);
+}
+
+export const preferencePlaces = z.array(z.union([
+  z.string().trim().min(1).max(120),
+  z.string().trim().max(2048).regex(googleMapsLink),
+])).max(5);
+
 const preferenceCategory = z.object({
   category: categoryId,
-  places: z.array(z.string().trim().min(1).max(120)).max(5),
+  places: preferencePlaces,
   weight: z.number().int().min(1).max(100).nullable(),
 });
 

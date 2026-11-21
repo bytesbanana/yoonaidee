@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 import { BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
 import {
   categoryLabels,
+  isGoogleMapsLink,
+  preferencePlaces,
   type PreferenceCategory,
 } from "@/lib/preferences/categories";
 
@@ -83,7 +85,11 @@ export function ProfileView({
 }
 
 function toRows(categories: PreferenceCategory[]) {
-  return categories.map(({ category, places, weight }) => ({ category, places, value: weight?.toString() ?? "" }));
+  return categories.map(({ category, places, weight }) => ({ category, locationText: places.join("\n"), value: weight?.toString() ?? "" }));
+}
+
+function locationsFromText(value: string) {
+  return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
 function PriorityEditor({
@@ -107,10 +113,12 @@ function PriorityEditor({
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
   const [error, setError] = useState("");
   const total = rows.reduce((sum, { value }) => sum + Number(value), 0);
-  const valid = rows.every(({ value }) => Number(value) >= 1) && total <= 100;
+  const locationsValid = rows.every(({ locationText }) => preferencePlaces.safeParse(locationsFromText(locationText)).success);
+  const valid = rows.every(({ value }) => !value || Number(value) >= 1) && total <= 100 && locationsValid;
   const previous = saved?.categories ?? [];
-  const changed = rows.length !== previous.length || rows.some(({ category, value }, index) =>
-    previous[index]?.category !== category || previous[index]?.weight !== (value ? Number(value) : null),
+  const changed = rows.length !== previous.length || rows.some(({ category, value, locationText }, index) =>
+    previous[index]?.category !== category || previous[index]?.weight !== (value ? Number(value) : null)
+    || previous[index]?.places.join("\n") !== locationsFromText(locationText).join("\n"),
   );
   const available = catalog.filter((category) => !rows.some((row) => row.category === category));
   const busy = status === "saving" || status === "conflict";
@@ -130,7 +138,7 @@ function PriorityEditor({
   function addCategory() {
     if (!selected || !available.includes(selected)) return;
     const original = previous.find(({ category }) => category === selected);
-    setRows((current) => [...current, { category: selected, places: original?.places ?? [], value: "" }]);
+    setRows((current) => [...current, { category: selected, locationText: original?.places.join("\n") ?? "", value: "" }]);
     setSelected("");
     setPickerOpen(false);
     setLimitMessage("");
@@ -161,7 +169,11 @@ function PriorityEditor({
         body: JSON.stringify({
           sessionId: saved?.sessionId ?? null,
           version: saved?.version ?? null,
-          weights: rows.map(({ category, value }) => ({ category, weight: Number(value) })),
+          weights: rows.map(({ category, value, locationText }) => ({
+            category,
+            weight: value ? Number(value) : null,
+            places: locationsFromText(locationText),
+          })),
         }),
       });
       const result = await response.json();
@@ -224,9 +236,11 @@ function PriorityEditor({
           </div>
           {rows.length === 0 && <p className="px-5 py-5 text-sm text-stone-600 sm:px-6">No categories selected.</p>}
             <ul className="divide-y divide-stone-100 px-5 sm:px-6">
-              {rows.map(({ category, places, value }) => {
+              {rows.map(({ category, locationText, value }) => {
                 const label = categoryLabels[category][0];
                 const Icon = categoryIcons[category] ?? MapPin;
+                const places = locationsFromText(locationText);
+                const locationLabel = places.map((place) => isGoogleMapsLink(place) ? "Google Maps location" : place).join(" · ");
                 return (
                   <li key={category} className="grid grid-cols-[minmax(0,1fr)_4.75rem_2.75rem] items-center gap-2 sm:gap-3 py-4">
                     <div className="flex min-w-0 items-start gap-3">
@@ -235,7 +249,7 @@ function PriorityEditor({
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="break-words font-semibold leading-tight">{label}</p>
-                        <p className="mt-1 break-words text-xs text-stone-600">{places.length ? places.join(" · ") : "Any nearby"}</p>
+                        <p className="mt-1 break-words text-xs text-stone-600">{locationLabel || "Any nearby"}</p>
                         <div aria-hidden className="mt-2 h-1.5 max-w-48 overflow-hidden rounded-full bg-stone-100">
                           <div className="h-full rounded-full bg-emerald-600" style={{ width: `${Number(value)}%` }} />
                         </div>
@@ -261,6 +275,33 @@ function PriorityEditor({
                     >
                       <X aria-hidden className="size-4" />
                     </button>
+                    <details className="col-span-full rounded-xl bg-stone-50 px-3 py-2">
+                      <summary className="cursor-pointer py-1 text-sm font-medium text-emerald-900">Edit locations</summary>
+                      <label className="mt-2 block text-sm text-stone-700">
+                        {label} locations
+                        <textarea
+                          rows={2}
+                          value={locationText}
+                          maxLength={10244}
+                          placeholder="Place name, address, or Google Maps link"
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setRows((current) => current.map((row) => row.category === category ? { ...row, locationText: value } : row));
+                            setStatus("idle");
+                          }}
+                          className="mt-1 block w-full rounded-lg border border-stone-300 bg-white p-2 text-base"
+                        />
+                      </label>
+                      <p className="mt-1 text-xs text-stone-600">Up to 5 places, one per line. Leave blank for any nearby location.</p>
+                      <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm font-medium text-emerald-800 underline">
+                        Find a place on Google Maps
+                      </a>
+                      {places.filter(isGoogleMapsLink).map((place, index) => (
+                        <a key={index} href={place} target="_blank" rel="noopener noreferrer" className="mt-2 block text-sm text-emerald-800 underline">
+                          Open map location {index + 1}
+                        </a>
+                      ))}
+                    </details>
                   </li>
                 );
               })}
@@ -276,7 +317,8 @@ function PriorityEditor({
                 {status === "saved" ? "Priorities saved." :
                   limitMessage ||
                   (total > 100 ? `Remove ${total - 100}% to reach 100%.` :
-                    !valid ? "Give each category at least 1%." :
+                    !locationsValid ? "Enter up to five locations per category using place names, addresses, or Google Maps links." :
+                      !valid ? "Enter a percentage from 1 to 100, or leave it blank." :
                       total < 100 ? `${100 - total}% left to allocate.` : "100% allocated.")}
               </p>
             )}

@@ -1,6 +1,6 @@
 import { intakePool, intakeTransaction } from "@/lib/db/intake-db";
 import { z } from "zod";
-import { categoryId, preferenceCategories } from "@/lib/preferences/categories";
+import { categoryId, preferenceCategories, preferencePlaces } from "@/lib/preferences/categories";
 
 const verifiedToken = z.object({ sub: z.string().min(1) });
 const verifiedAccessToken = z.object({ client_id: z.string(), expires_in: z.number() });
@@ -18,7 +18,8 @@ const weightUpdate = z.object({
   version: z.number().int().nonnegative().nullable(),
   weights: z.array(z.object({
     category: categoryId,
-    weight: z.number().int().min(1).max(100),
+    weight: z.number().int().min(1).max(100).nullable(),
+    places: preferencePlaces.optional(),
   })).max(categoryId.options.length),
 });
 
@@ -128,8 +129,9 @@ export async function PATCH(request: Request) {
     const user = await authenticate(request);
     if (user instanceof Response) return user;
     const update = weightUpdate.safeParse(await request.json().catch(() => null));
-    if (!update.success || update.data.weights.reduce((total, row) => total + row.weight, 0) > 100) {
-      return json({ error: "Enter whole percentages from 1 to 100 with a combined total of at most 100%." }, 400);
+    if (!update.success) return json({ error: "Check the locations and percentages for each category." }, 400);
+    if (update.data.weights.reduce((total, row) => total + (row.weight ?? 0), 0) > 100) {
+      return json({ error: "The combined percentage must be at most 100%." }, 400);
     }
 
     const { sessionId, version, weights } = update.data;
@@ -143,7 +145,7 @@ export async function PATCH(request: Request) {
       if (sessionId !== null || version !== null) return conflict();
       const created = await intakeTransaction(async (client) => {
         await client.query("INSERT INTO users (line_user_id) VALUES ($1) ON CONFLICT DO NOTHING", [user]);
-        const categories = weights.map((item) => ({ ...item, places: [] }));
+        const categories = weights.map((item) => ({ ...item, places: item.places ?? [] }));
         const { rows: [inserted] } = await client.query<Session>(
           `INSERT INTO conversation_sessions (user_id, preferences, profile_version)
            SELECT id, $2::jsonb, 1 FROM users WHERE line_user_id = $1
@@ -160,7 +162,7 @@ export async function PATCH(request: Request) {
 
     const { categories = [] } = storedProfile.parse(session.preferences);
     const placesByCategory = new Map(categories.map(({ category, places }) => [category, places]));
-    const updated = weights.map((item) => ({ ...item, places: placesByCategory.get(item.category) ?? [] }));
+    const updated = weights.map((item) => ({ ...item, places: item.places ?? placesByCategory.get(item.category) ?? [] }));
     const { rows: [saved] } = await intakePool.query<Session>(
       `UPDATE conversation_sessions
        SET preferences = jsonb_set(preferences, '{categories}', $3::jsonb),
