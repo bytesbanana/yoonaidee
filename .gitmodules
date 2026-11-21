@@ -1,3 +1,4 @@
 [submodule "yoonaidee-background-worker"]
 	path = yoonaidee-background-worker
 	url = https://github.com/khamteerapat/yoonaidee-background-worker.git
+	branch = main
