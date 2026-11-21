@@ -141,7 +141,13 @@ export async function handleTextEvent(event: z.infer<typeof textEvent>): Promise
     if (!updated.should_queue) return finish({});
     return finish(await queueAnalysis(result.profile, updated.profile_version, `analysis:${session.id}:${updated.profile_version}`));
   }).catch((error: unknown) => {
-    console.error("line.intake.failed", { eventId, stage, code: intakeErrorCode(error, stage), elapsedMs: Date.now() - startedAt });
+    console.error("line.intake.failed", {
+      eventId,
+      stage,
+      code: intakeErrorCode(error, stage),
+      message: error instanceof Error ? error.message : String(error),
+      elapsedMs: Date.now() - startedAt,
+    });
     throw error;
   });
 }

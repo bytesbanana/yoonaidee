@@ -15,10 +15,13 @@ export async function runCodexIntake({ instructions, input, outputSchema }: {
   const home = await mkdtemp(join(tmpdir(), "yoonaidee-codex-"));
   try {
     const workingDirectory = join(home, "work");
+    const codexHome = join(home, ".codex");
     await mkdir(workingDirectory);
+    // The Codex CLI refuses to start when CODEX_HOME does not exist.
+    await mkdir(codexHome, { recursive: true });
     const codex = new Codex({
       apiKey,
-      env: { HOME: home, CODEX_HOME: join(home, ".codex"), PATH: "/usr/bin:/bin" },
+      env: { HOME: home, CODEX_HOME: codexHome, PATH: "/usr/bin:/bin" },
       config: { features: { shell_tool: false, unified_exec: false, shell_snapshot: false } },
     });
     const thread = codex.startThread({
