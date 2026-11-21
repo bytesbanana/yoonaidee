@@ -18,7 +18,7 @@ const destinations = [
   {
     href: "/recommendations",
     title: "Current Lifestyle Optimization",
-    description: "Find out where to see your personalized neighborhood recommendations.",
+    description: "Explore five sample Bangkok zones and browse example homes.",
     icon: Compass,
   },
 ];

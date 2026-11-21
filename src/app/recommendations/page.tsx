@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Compass } from "lucide-react";
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { DEMO_ZONES } from "./demo-zones";
 
 export const metadata: Metadata = {
   title: "Current Lifestyle Optimization | Yoo Nai Dee",
@@ -8,27 +10,51 @@ export const metadata: Metadata = {
 
 export default function RecommendationsPage() {
   return (
-    <main className="min-h-dvh bg-[#f8f7f2] px-5 [font-family:var(--font-geist-sans),sans-serif] py-8 text-[#172c24] sm:px-8 sm:py-12">
-      <div className="mx-auto max-w-xl">
-        <Link
-          href="/"
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[#164334] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#164334]"
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" />
-          Home
-        </Link>
-        <section className="mt-4 rounded-[2rem] border border-[#dce3d9] bg-white p-7 sm:p-10">
-          <span className="grid size-12 place-items-center rounded-2xl bg-[#eaf1e6] text-[#164334]">
-            <Compass aria-hidden="true" className="size-6" />
-          </span>
-          <h1 className="mt-6 font-serif text-4xl tracking-tight sm:text-5xl">
-            Current Lifestyle Optimization
-          </h1>
-          <p className="mt-4 max-w-sm leading-relaxed text-[#52645a]">
-            Open your Yoo Nai Dee chat in LINE to request neighborhood recommendations or revisit your results.
-          </p>
-        </section>
-      </div>
-    </main>
+    <>
+      <Link href="/" className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[#164334] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4">
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        Home
+      </Link>
+
+      <header className="mt-4 rounded-[2rem] bg-[#163a2f] p-7 text-[#faf8ed] sm:p-10">
+        <h1 className="max-w-xl font-serif text-4xl leading-tight tracking-tight sm:text-5xl">
+          Current Lifestyle Optimization
+        </h1>
+        <p className="mt-4 max-w-md leading-relaxed text-[#e0e9dd]">
+          Explore five sample Bangkok zones and the types of homes you could browse in each. Photos are illustrative.
+        </p>
+      </header>
+
+      <section className="mt-8" aria-labelledby="zones-heading">
+        <h2 id="zones-heading" className="font-serif text-2xl tracking-tight sm:text-3xl">Top 5 demo zones</h2>
+        <ol className="mt-4 grid gap-4 sm:grid-cols-2">
+          {DEMO_ZONES.map((zone) => (
+            <li key={zone.slug}>
+              <Link
+                href={`/recommendations/${zone.slug}`}
+                className="group block overflow-hidden rounded-3xl border border-[#dce3d9] bg-white hover:border-[#829e89] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#164334]"
+              >
+                <div className="relative aspect-[16/9] overflow-hidden bg-[#eaf1e6]">
+                  <Image
+                    src={zone.photo}
+                    alt=""
+                    fill
+                    sizes="(min-width: 832px) 376px, (min-width: 640px) 50vw, 100vw"
+                    className="object-cover motion-safe:transition-transform motion-safe:group-hover:scale-105"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4 p-5">
+                  <div>
+                    <h3 className="font-serif text-2xl tracking-tight">{zone.name}</h3>
+                    <p className="mt-1 text-sm text-[#52645a]">Explore properties</p>
+                  </div>
+                  <ArrowUpRight aria-hidden="true" className="size-5 shrink-0 text-[#164334]" />
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </>
   );
 }

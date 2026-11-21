@@ -35,7 +35,7 @@ Spacing scale: Tailwind default (`p-4`, `p-6`, `gap-2`, `gap-4`). Type scale: `t
 
 ### Recommendations page
 
-- Direct people to the Yoo Nai Dee LINE chat to request recommendations or revisit results delivered there.
+- Show five demo zone cards with illustrative photography. Each card opens a zone page with sample properties and a link back to the list. Show a photo, monthly rent, floor area, and amenities on each property card.
 
 
 ### Profile page

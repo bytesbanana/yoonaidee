@@ -38,6 +38,8 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 
 **Not in MVP:** Nationwide coverage, multi-agent debate, real-time BTS timing without a valid source, complex auth, sophisticated analytics, Redis/Kafka/S3, production-scale infrastructure.
 
+The web demo at `/recommendations` shows five sample Bangkok zones in a fixed order. Each zone opens a detail page with fictional condos, apartments or homes in housing villages. Each example includes an illustrative property photo, sample monthly rent in THB, floor area in square meters, and amenities.
+
 ## 5. User journey
 
 1. User sends a free-form LINE message.
