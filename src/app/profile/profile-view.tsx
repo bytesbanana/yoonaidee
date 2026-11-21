@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { GooglePlacePicker } from "./google-place-picker";
 import { BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
 import {
   categoryLabels,
@@ -132,6 +133,11 @@ function PriorityEditor({
     }
     setRows((current) => current.map((row) => row.category === category ? { ...row, value: next } : row));
     setLimitMessage("");
+    setStatus("idle");
+  }
+
+  function updateLocations(category: Category, locationText: string) {
+    setRows((current) => current.map((row) => row.category === category ? { ...row, locationText } : row));
     setStatus("idle");
   }
 
@@ -277,6 +283,18 @@ function PriorityEditor({
                     </button>
                     <details className="col-span-full rounded-xl bg-stone-50 px-3 py-2">
                       <summary className="cursor-pointer py-1 text-sm font-medium text-emerald-900">Edit locations</summary>
+                      {places.length < 5 && (
+                        <GooglePlacePicker
+                          categoryLabel={label}
+                          onSelect={(url) => {
+                            if (busy) return false;
+                            const updated = [...places, url];
+                            if (places.includes(url) || !preferencePlaces.safeParse(updated).success) return false;
+                            updateLocations(category, updated.join("\n"));
+                            return true;
+                          }}
+                        />
+                      )}
                       <label className="mt-2 block text-sm text-stone-700">
                         {label} locations
                         <textarea
@@ -284,18 +302,11 @@ function PriorityEditor({
                           value={locationText}
                           maxLength={10244}
                           placeholder="Place name, address, or Google Maps link"
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            setRows((current) => current.map((row) => row.category === category ? { ...row, locationText: value } : row));
-                            setStatus("idle");
-                          }}
+                          onChange={(event) => updateLocations(category, event.target.value)}
                           className="mt-1 block w-full rounded-lg border border-stone-300 bg-white p-2 text-base"
                         />
                       </label>
                       <p className="mt-1 text-xs text-stone-600">Up to 5 places, one per line. Leave blank for any nearby location.</p>
-                      <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm font-medium text-emerald-800 underline">
-                        Find a place on Google Maps
-                      </a>
                       {places.filter(isGoogleMapsLink).map((place, index) => (
                         <a key={index} href={place} target="_blank" rel="noopener noreferrer" className="mt-2 block text-sm text-emerald-800 underline">
                           Open map location {index + 1}
