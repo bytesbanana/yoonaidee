@@ -3,6 +3,8 @@
 **Principle:** One Next.js/Node.js codebase, one PostgreSQL database, one prepared neighborhood dataset. Keep the LINE webhook fast and the AI path replaceable by a mock.
 **Deployment:** not settled yet — plan is Docker Compose (`web` + `db`) with the **job worker in a separate repo** sharing the same `DATABASE_URL`. Until the app scaffold lands, run Next.js and Postgres however is fastest locally.
 
+**Implemented intake:** The Next.js webhook verifies LINE events, reads the active PostgreSQL profile by verified LINE `userId`, and runs Codex intake inline. Missing destination, monthly rent ceiling, or transport gets a direct text reply and no job. A newly complete or changed profile creates one `ANALYSIS` job and gets a direct Flex reply. While an analysis is active, intake silently ignores new messages for that user. See [current intake flow](docs/line-codex-current-flow.svg). The diagrams and queue names below describe the older planned architecture, not current intake. The separate analysis worker is still required to consume the jobs and deliver results.
+
 ## 1. High-level design
 
 ```mermaid
@@ -186,7 +188,8 @@ Use tool data as untrusted input; validate IDs and fields. Limit tool calls and 
 
 ```dotenv
 OPENAI_API_KEY=
-OPENAI_MODEL=
+# Web service intake; choose a supported Codex model.
+CODEX_MODEL=
 LINE_CHANNEL_SECRET=
 LINE_CHANNEL_ACCESS_TOKEN=
 DATABASE_URL=

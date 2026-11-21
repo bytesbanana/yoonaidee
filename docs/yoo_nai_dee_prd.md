@@ -302,37 +302,24 @@ Progress state stored in `analysis_jobs`; LIFF polls DB through API. Retry uses 
 
 **Associated files:** `yoo_nai_dee_data_dictionary.md`, `yoo_nai_dee_init.sql`.
 
-### Direct webhook reply test
+### Direct intake and analysis queue
 
-The webhook currently uses direct reply mode. It verifies LINE's signature and acknowledges one-to-one text messages with a plain text message via the LINE Reply API, using the event's reply token. Before replying, it requests a five-second loading indicator when the event includes a user ID. The reply can clear the indicator sooner. Loading failures are logged as `line.loading.failed` and do not stop the reply. This mode pauses profile intake and queue creation for new messages.
+Apply `docs/yoo_nai_dee_init.sql` to PostgreSQL. Set `DATABASE_URL`, `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `OPENAI_API_KEY`, and `CODEX_MODEL` on the Next.js web service. Point LINE at `/api/line/webhook` and enable webhook redelivery. The legacy `npm run intake:worker` does not consume `ANALYSIS` jobs and is not needed for new intake.
 
-Set both `LINE_CHANNEL_SECRET` and `LINE_CHANNEL_ACCESS_TOKEN` on the Railway **web** service. Keep the webhook URL at `/api/line/webhook`. An empty verification batch returns HTTP 200. Send a message in a one-to-one OA chat and look for `line.reply.accepted` in the web service logs. A rejected LINE API call logs `line.reply.failed` with its HTTP status.
+The signed LINE `userId` identifies the saved profile. Codex extracts preferences; code checks destination, maximum monthly rent, and transport. Lifestyle and weights are optional. The API saves partial progress and sends one direct text question. When ready, it saves the new profile and one immutable `ANALYSIS` job snapshot in the same transaction, then replies with Flex. Messages received while that user has a queued/running analysis are deduplicated and otherwise ignored. `retry` / `ลองใหม่` requeues the same saved profile after terminal failure. LINE reply failure does not undo the committed intake.
 
-### Queued intake configuration
+Codex runs inline as requested. LINE reports webhook timeouts beyond two seconds, so a successful extraction can still trigger redelivery; deduplication protects already committed work. A model error rolls back intake and returns `503`. Verify hosted timing before production use. Deploy on a restricted Node host/container without secret-bearing mounts, and verify the SDK's tool and sandbox settings on that host. The LINE user ID is not sent to Codex.
 
-The web app and intake worker use `docs/yoo_nai_dee_init.sql` as their shared schema. Apply it to your PostgreSQL database. Copy `.env.example` to `.env` and set `DATABASE_URL`, `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `OPENAI_API_KEY`, and `OPENAI_MODEL` (a Responses model that supports Structured Outputs).
+The separate analysis consumer must compare the job's `profile_version` to the current session version before sending results, and notify users on terminal failure with the retry command. The worker submodule in this checkout has no analysis consumer implementation. A queued analysis remains active until an analysis worker finishes it.
 
-Run `npm run dev` and, in a separate process, `npm run intake:worker`. Set your LINE Messaging API webhook URL to your public HTTPS app URL plus `/api/line/webhook`. The worker consumes `CONVERSATION` jobs and sends intake questions and acknowledgments as Flex bubbles through LINE Push. Deploy or restart the intake worker alongside the web service for live replies. On Railway, run the web service with `npm start` and a second service from the same repository with the start command `npm run intake:worker`. Give both services the same PostgreSQL `DATABASE_URL`. The web service uses `LINE_CHANNEL_SECRET`. The worker uses `LINE_CHANNEL_ACCESS_TOKEN`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
+### Smoke check
 
-For a smoke check, send “อยากได้คอนโดใกล้ยิมกับตลาด ทำงานอโศก งบไม่เกิน 15,000 บาทต่อเดือน”. The bot should ask about transportation. Reply “BTS”, then “ยืนยัน” when it suggests a weight split. Expect a LINE acknowledgment and verify the saved profile in `conversation_sessions.preferences`. This intake uses the configured OpenAI model.
-
-### Trace a real LINE OA message
-
-Register the public HTTPS `/api/line/webhook` URL for your Messaging API channel and enable **Use webhook**. Configure the web app and intake worker with the same `DATABASE_URL`. The LINE Console's **Verify** action can send an empty batch. Expect `line.webhook.accepted` with `eventCount: 0` for that check.
-
-Send a one-to-one text message to the OA as a LINE user. Open the web app and worker logs and follow the same `jobId` through these entries:
-
-| Log entry | What it confirms |
-| --- | --- |
-| `line.webhook.queued` | The signed LINE message was saved and a conversation job was queued. |
-| `line.agent.started` | The worker picked up the job and is calling the agent. |
-| `line.agent.completed` | Agent output was validated and the reply was queued. `clarificationNeeded` and `profileReady` show which path ran. |
-| `line.push.accepted` | The LINE API accepted the outbound reply. Check the OA chat to confirm receipt. |
-
-If the trace stops after queueing, check for `line.worker.ready` and verify both processes use the same database. `line.agent.failed` identifies an extraction failure. `line.push.failed` shows the HTTP status if LINE returned a response. The trace omits message text, LINE user IDs, and credentials.
+Send “ทำงานอโศก งบไม่เกิน 15,000 บาทต่อเดือน”. Expect a text question about transport and no job. Reply “BTS”. Expect one Flex confirmation, one `line.analysis.queued` log entry, and a job snapshot containing the three required fields. Send another message before the job finishes: expect no reply or new job. `line.webhook.intake_failed` reports a rolled-back intake; `line.reply.failed` reports reply failure after commit. Logs omit message text and credentials.
 
 ### Housing preferences in LINE and on the web
 
-The intake agent saves the selected catalog categories, their named places (or an empty list for any nearby place), and their weights in `conversation_sessions.preferences.categories`. It saves partial progress after each message. The worker marks the profile ready when the required housing details are present and the category weights add up to 100%. Users can supply a split in chat or reply “confirm” / “ยืนยัน” to the suggested split. The existing schema supports these additions without a database migration.
+The intake agent saves any selected catalog categories, named places, and weights in `conversation_sessions.preferences.categories`. Missing categories or weights do not block analysis. No database migration is required.
 
-For the web view, create a LIFF app in a LINE Login channel under the same LINE provider as the Messaging API channel. Set its endpoint URL to `https://<your-public-host>/settings`, enable the `openid` scope, and configure `NEXT_PUBLIC_LIFF_ID` and `LINE_LOGIN_CHANNEL_ID` on the web service before building and deploying. Use the LIFF URL for the LINE rich menu link. The settings API verifies the ID token with LINE and reads the profile associated with its subject. The settings page displays saved preferences and directs updates to the LINE chat.
+For the web view, create a LIFF app in a LINE Login channel under the same LINE provider as the Messaging API channel. Set its endpoint URL to `https://<your-public-host>/` so both `/profile` and `/settings` can receive LINE login callbacks, enable the `openid` and `profile` scopes, and configure `NEXT_PUBLIC_LIFF_ID` and `LINE_LOGIN_CHANNEL_ID` on the web service before building and deploying. Use the LIFF URL with `/settings` appended for the LINE rich menu link. The settings API verifies the ID token with LINE when available. Otherwise it checks the LINE access token for the configured channel and reads the user ID from LINE’s profile API. The settings page displays saved preferences and directs updates to the LINE chat.
+
+The home page’s Go to Profile button opens `/profile`, which uses the same authenticated API to show the user’s saved housing preferences, including partial intake. Users can add categories from the shared catalog, remove them, and adjust their weights on the profile page. The API saves whole percentages totaling up to 100%. Partial allocations can be saved.

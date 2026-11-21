@@ -1,0 +1,300 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
+import {
+  categoryLabels,
+  type PreferenceCategory,
+} from "@/lib/preferences/categories";
+
+type Category = PreferenceCategory["category"];
+
+const catalog = (Object.keys(categoryLabels) as Category[]).sort(
+  (a, b) => categoryLabels[a][0].localeCompare(categoryLabels[b][0]),
+);
+
+type Priorities = {
+  sessionId: string;
+  version: number;
+  categories: PreferenceCategory[];
+};
+
+const categoryIcons: Partial<Record<PreferenceCategory["category"], LucideIcon>> = {
+  gym: Dumbbell,
+  work: BriefcaseBusiness,
+  supermarket: ShoppingBasket,
+};
+
+export function ProfileView({
+  profile,
+  priorities,
+  details,
+  message,
+  signIn,
+  getAuthHeaders,
+  reload,
+}: {
+  profile: { displayName: string; pictureUrl?: string } | null;
+  priorities: Priorities | null;
+  details: [string, string | null | undefined][];
+  message?: string;
+  signIn?: () => void;
+  getAuthHeaders: () => Record<string, string> | null;
+  reload: () => void;
+}) {
+  return (
+    <main className="min-h-dvh bg-stone-100 px-4 py-7 text-stone-900 sm:px-6 sm:py-12">
+      <div className="mx-auto max-w-xl">
+        <header className="mb-6 flex items-center justify-between gap-4 px-1">
+          <h1 className="text-3xl font-semibold tracking-tight">Your profile</h1>
+          {profile?.pictureUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.pictureUrl} alt="" width={48} height={48} className="size-12 shrink-0 rounded-full object-cover" />
+          ) : (
+            <div className="grid size-12 shrink-0 place-items-center rounded-full bg-white text-stone-600">
+              <UserRound aria-hidden className="size-5" />
+            </div>
+          )}
+        </header>
+
+        <PriorityEditor
+          key={priorities ? `${priorities.sessionId}:${priorities.version}` : "empty"}
+          priorities={priorities}
+          message={message}
+          signIn={signIn}
+          getAuthHeaders={getAuthHeaders}
+          reload={reload}
+        />
+
+        <section aria-labelledby="housing-details" className="mt-5 rounded-3xl border border-stone-200 bg-white px-5 py-5 sm:px-6">
+          <h2 id="housing-details" className="text-base font-semibold">Profile details</h2>
+          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
+            {[["LINE display name", profile?.displayName], ...details].map(([label, value]) => (
+              <div key={label} className="min-w-0">
+                <dt className="text-xs text-stone-600">{label}</dt>
+                <dd className="mt-1 break-words text-sm font-medium">{value || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function toRows(categories: PreferenceCategory[]) {
+  return categories.map(({ category, places, weight }) => ({ category, places, value: weight?.toString() ?? "" }));
+}
+
+function PriorityEditor({
+  priorities,
+  message,
+  signIn,
+  getAuthHeaders,
+  reload,
+}: {
+  priorities: Priorities | null;
+  message?: string;
+  signIn?: () => void;
+  getAuthHeaders: () => Record<string, string> | null;
+  reload: () => void;
+}) {
+  const [saved, setSaved] = useState(priorities);
+  const [rows, setRows] = useState(() => toRows(priorities?.categories ?? []));
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selected, setSelected] = useState<Category | "">("");
+  const [limitMessage, setLimitMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
+  const [error, setError] = useState("");
+  const total = rows.reduce((sum, { value }) => sum + Number(value), 0);
+  const valid = rows.every(({ value }) => Number(value) >= 1) && total <= 100;
+  const previous = saved?.categories ?? [];
+  const changed = rows.length !== previous.length || rows.some(({ category, value }, index) =>
+    previous[index]?.category !== category || previous[index]?.weight !== (value ? Number(value) : null),
+  );
+  const available = catalog.filter((category) => !rows.some((row) => row.category === category));
+  const busy = status === "saving" || status === "conflict";
+
+  function updateValue(category: Category, value: string, next: string) {
+    if (!/^\d{0,3}$/.test(next)) return;
+    const nextTotal = total - Number(value) + Number(next);
+    if (Number(next) > 100 || (nextTotal > 100 && nextTotal >= total)) {
+      setLimitMessage("The total can’t exceed 100%. Lower another category to free up room.");
+      return;
+    }
+    setRows((current) => current.map((row) => row.category === category ? { ...row, value: next } : row));
+    setLimitMessage("");
+    setStatus("idle");
+  }
+
+  function addCategory() {
+    if (!selected || !available.includes(selected)) return;
+    const original = previous.find(({ category }) => category === selected);
+    setRows((current) => [...current, { category: selected, places: original?.places ?? [], value: "" }]);
+    setSelected("");
+    setPickerOpen(false);
+    setLimitMessage("");
+    setStatus("idle");
+  }
+
+  function removeCategory(category: Category) {
+    setRows((current) => current.filter((row) => row.category !== category));
+    setLimitMessage("");
+    setStatus("idle");
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!valid || !changed || busy || message) return;
+    const headers = getAuthHeaders();
+    if (!headers) {
+      setError("Sign in with LINE again to save your priorities.");
+      setStatus("error");
+      return;
+    }
+
+    setStatus("saving");
+    try {
+      const response = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: saved?.sessionId ?? null,
+          version: saved?.version ?? null,
+          weights: rows.map(({ category, value }) => ({ category, weight: Number(value) })),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.error ?? "Could not save your priorities.");
+        setStatus(response.status === 409 ? "conflict" : "error");
+        return;
+      }
+      setSaved(result);
+      setRows(toRows(result.categories));
+      setLimitMessage("");
+      setStatus("saved");
+    } catch {
+      setError("Could not save your priorities. Try again shortly.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <form onSubmit={save} aria-labelledby="lifestyle-priorities" className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
+      <div className="bg-emerald-950 p-5 text-white sm:p-6">
+        <h2 id="lifestyle-priorities" className="text-2xl font-semibold tracking-tight">Lifestyle priorities</h2>
+        <p className="mt-1 text-sm text-emerald-50/85">Allocate up to 100% across the places that matter to you.</p>
+        <div className="mt-5 flex items-baseline justify-between gap-2 text-sm">
+          <span className="font-medium">Total allocated</span>
+          <output className="tabular-nums"><strong className="text-xl">{total}%</strong><span className="text-emerald-50/75"> / 100%</span></output>
+        </div>
+        <progress
+          aria-label="Percentage allocated"
+          max={100}
+          value={Math.min(total, 100)}
+          className="mt-2 block h-2 w-full overflow-hidden rounded-full bg-white/20 [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-emerald-300 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-emerald-300"
+        />
+      </div>
+      {!message && (
+        <fieldset disabled={busy} className="min-w-0">
+          <legend className="sr-only">Lifestyle categories</legend>
+          <div className="border-b border-stone-100 px-5 py-4 sm:px-6">
+            {pickerOpen ? (
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="min-w-40 flex-1 text-sm font-medium">
+                  Category
+                  <select
+                    value={selected}
+                    onChange={(event) => setSelected(event.target.value as Category | "")}
+                    className="mt-1 block h-11 w-full rounded-xl border border-stone-300 bg-white px-2 text-base"
+                  >
+                    <option value="">Choose a category</option>
+                    {available.map((category) => <option key={category} value={category}>{categoryLabels[category][0]}</option>)}
+                  </select>
+                </label>
+                <button type="button" disabled={!selected} onClick={addCategory} className="h-11 rounded-xl bg-emerald-900 px-4 text-sm font-semibold text-white disabled:bg-stone-200 disabled:text-stone-600">Add</button>
+                <button type="button" onClick={() => { setPickerOpen(false); setSelected(""); }} className="h-11 px-2 text-sm font-medium text-stone-700">Cancel</button>
+              </div>
+            ) : available.length > 0 && (
+              <button type="button" onClick={() => setPickerOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-100">
+                <Plus aria-hidden className="size-4" /> Add category
+              </button>
+            )}
+          </div>
+          {rows.length === 0 && <p className="px-5 py-5 text-sm text-stone-600 sm:px-6">No categories selected.</p>}
+            <ul className="divide-y divide-stone-100 px-5 sm:px-6">
+              {rows.map(({ category, places, value }) => {
+                const label = categoryLabels[category][0];
+                const Icon = categoryIcons[category] ?? MapPin;
+                return (
+                  <li key={category} className="grid grid-cols-[minmax(0,1fr)_4.75rem_2.75rem] items-center gap-2 sm:gap-3 py-4">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-800">
+                        <Icon aria-hidden className="size-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words font-semibold leading-tight">{label}</p>
+                        <p className="mt-1 break-words text-xs text-stone-600">{places.length ? places.join(" · ") : "Any nearby"}</p>
+                        <div aria-hidden className="mt-2 h-1.5 max-w-48 overflow-hidden rounded-full bg-stone-100">
+                          <div className="h-full rounded-full bg-emerald-600" style={{ width: `${Number(value)}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                    <label className="flex h-11 items-center gap-1 rounded-xl border border-stone-300 bg-stone-50 pr-3 focus-within:border-emerald-700 focus-within:ring-2 focus-within:ring-emerald-700/20">
+                      <span className="sr-only">{label} percentage</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={value}
+                        placeholder="—"
+                        onChange={(event) => updateValue(category, value, event.target.value)}
+                        className="w-full min-w-0 bg-transparent pl-2 text-right text-base font-semibold tabular-nums outline-none"
+                      />
+                      <span aria-hidden className="text-sm text-stone-600">%</span>
+                    </label>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${label}`}
+                      onClick={() => removeCategory(category)}
+                      className="grid size-11 place-items-center rounded-xl text-stone-600 hover:bg-red-50 hover:text-red-800"
+                    >
+                      <X aria-hidden className="size-4" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+        </fieldset>
+      )}
+      {!message && (rows.length > 0 || changed || status !== "idle") && (
+          <div className="border-t border-stone-200 bg-stone-50 px-5 py-4 sm:px-6">
+            {status === "error" || status === "conflict" ? (
+              <p role="alert" className="mb-3 text-sm text-red-800">{error}</p>
+            ) : (
+              <p role="status" className="mb-3 text-sm text-stone-600">
+                {status === "saved" ? "Priorities saved." :
+                  limitMessage ||
+                  (total > 100 ? `Remove ${total - 100}% to reach 100%.` :
+                    !valid ? "Give each category at least 1%." :
+                      total < 100 ? `${100 - total}% left to allocate.` : "100% allocated.")}
+              </p>
+            )}
+            {status === "conflict" ? (
+              <button type="button" onClick={reload} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">Reload saved priorities</button>
+            ) : (
+              <button type="submit" disabled={!valid || !changed || status === "saving"} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:bg-stone-200 disabled:text-stone-600">
+                {status === "saving" ? "Saving…" : "Save priorities"}
+              </button>
+            )}
+          </div>
+      )}
+      {message && (
+        <div className="px-5 py-5 sm:px-6">
+          <p className="text-sm text-stone-600" role="status">{message}</p>
+          {signIn && <button type="button" onClick={signIn} className="mt-4 rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">Sign in with LINE</button>}
+        </div>
+      )}
+    </form>
+  );
+}

@@ -6,5 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function SettingsPage() {
-  return <SettingsView liffId={process.env.NEXT_PUBLIC_LIFF_ID ?? ""} />;
+  return <SettingsView />;
 }
