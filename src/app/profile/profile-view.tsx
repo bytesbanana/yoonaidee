@@ -50,7 +50,7 @@ export function ProfileView({
   reload: () => void;
 }) {
   return (
-    <main className="min-h-dvh bg-stone-100 px-4 py-7 text-stone-900 sm:px-6 sm:py-12">
+    <main className="min-h-dvh bg-stone-100 px-4 py-7 text-stone-900 [font-family:var(--font-geist-sans),sans-serif] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-xl">
         <header className="mb-6 flex items-center justify-between gap-4 px-1">
           <h1 className="text-3xl font-semibold tracking-tight">Your profile</h1>
