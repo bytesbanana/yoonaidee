@@ -13,8 +13,7 @@ const ownedResults = `
   JOIN conversation_sessions s ON s.id = j.session_id
   JOIN users u ON u.id = s.user_id
   WHERE u.line_user_id = $1 AND j.job_type = 'ANALYSIS' AND j.status = 'COMPLETED'`;
-const summaryColumns = `r.id, r.created_at AS "createdAt",
-  r.profile_snapshot #>> '{destinations,0,name}' AS destination`;
+const summaryColumns = `r.id, r.created_at AS "createdAt"`;
 const newestFirst = "ORDER BY r.created_at DESC, r.id DESC";
 
 export async function GET(request: Request) {
@@ -46,7 +45,7 @@ export async function GET(request: Request) {
     }
 
     return json({
-      analysis: { id: row.id, createdAt: row.createdAt, destination: row.destination, result: parsed.data },
+      analysis: { id: row.id, createdAt: row.createdAt, result: parsed.data },
     });
   } catch {
     console.error("line.analyses.read_failed");

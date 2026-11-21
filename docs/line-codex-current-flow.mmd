@@ -14,7 +14,7 @@ sequenceDiagram
     else Intake needed
         W->>C: Extract updates from text and saved profile
         C-->>W: Structured preference update
-        W->>W: Check destination, monthly rent, transport
+        W->>W: Check monthly rent and transport
         alt Missing required field
             W->>D: Save partial profile, no job
             W->>L: Reply with one text question

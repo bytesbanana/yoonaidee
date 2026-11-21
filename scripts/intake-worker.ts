@@ -9,7 +9,7 @@ type ConversationJob = {
   session_id: string;
   user_id: string;
   content: string;
-  preferences: unknown;
+  preferences: Record<string, unknown>;
   profile_version: number;
   awaiting_question: string | null;
   attempts: number;

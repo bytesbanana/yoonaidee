@@ -75,9 +75,9 @@
   <line x1="668.5455" y1="382" x2="365.0355" y2="382" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
   <text x="516.7905" y="372" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Structured preference update</text>
 </g>
-<g class="message" data-from="W" data-to="W" data-label="Check destination, monthly rent, transport" data-line-style="solid" data-arrow-head="filled" data-self="true">
+<g class="message" data-from="W" data-to="W" data-label="Check monthly rent and transport" data-line-style="solid" data-arrow-head="filled" data-self="true">
   <polyline points="365.0355,422 395.0355,422 395.0355,442 365.0355,442" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
-  <text x="403.0355" y="432" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Check destination, monthly rent, transport</text>
+  <text x="403.0355" y="432" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Check monthly rent and transport</text>
 </g>
 <g class="message" data-from="W" data-to="D" data-label="Save partial profile, no job" data-line-style="solid" data-arrow-head="filled" data-self="false">
   <line x1="365.0355" y1="520" x2="523.8299999999999" y2="520" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />

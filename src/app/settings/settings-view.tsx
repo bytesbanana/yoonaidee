@@ -7,7 +7,6 @@ import { useLanguage } from "../providers/language-provider";
 import { useLiff } from "../providers/LiffProvider";
 import { hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
 import { formatHousingType, formatPriorityCategory, formatPriorityLocation, formatTransport } from "@/lib/preferences/display";
-import { normalizeLocation } from "@/lib/preferences/locations";
 import { lineAuthHeaders } from "@/lib/line/liff-auth";
 
 type Settings = {
@@ -17,7 +16,6 @@ type Settings = {
   budget: number | null;
   transport: string | null;
   preferredModes: string[];
-  destination: string | null;
   housing: string[];
 };
 
@@ -87,7 +85,6 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
   const preferredModes = settings?.preferredModes.map((mode) => formatTransport(mode, language)).filter(Boolean);
   const transport = preferredModes?.join(", ") || (settings?.transport && formatTransport(settings.transport, language));
   const housingDetails: [string, string | null | undefined][] = [
-    [t("Destination"), settings?.destination && normalizeLocation(settings.destination)],
     [t("Monthly Rent Ceiling"), settings?.budget ? `฿${settings.budget.toLocaleString(locale)}` : null],
     [t("Transport"), transport],
     [t("Housing Types"), settings?.housing.map((type) => formatHousingType(type, language)).filter(Boolean).join(", ")],

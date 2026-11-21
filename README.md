@@ -1,6 +1,6 @@
 # Yoo Nai Dee (อยู่ไหนดี)
 
-Yoo Nai Dee is a LINE-first hackathon project for people deciding where to live in Bangkok. The bot collects a regular destination, a monthly rent ceiling, a preferred way to get around, and optional lifestyle preferences. The web app displays saved neighborhood recommendations.
+Yoo Nai Dee is a LINE-first hackathon project for people deciding where to live in Bangkok. The bot collects a monthly rent ceiling, a preferred way to get around, and optional weighted priorities such as Work, School, and Gym. The web app displays saved neighborhood recommendations.
 
 ## What works today
 

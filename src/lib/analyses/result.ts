@@ -44,5 +44,5 @@ export const resultSchema = z.object({
 
 export type AnalysisResult = z.output<typeof resultSchema>;
 export type ZoneResult = z.output<typeof zone>;
-export type AnalysisSummary = { id: string; createdAt: string; destination: string | null };
+export type AnalysisSummary = { id: string; createdAt: string };
 export type SavedAnalysis = AnalysisSummary & { result: AnalysisResult };

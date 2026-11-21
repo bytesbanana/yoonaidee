@@ -47,7 +47,6 @@ function AnalysisResults({ analysis }: { analysis: SavedAnalysis }) {
 
   return (
     <div className="mt-5">
-      {analysis.destination && <span className="block font-semibold">{analysis.destination}</span>}
       <time className="text-sm text-[#52645a]" dateTime={analysis.createdAt}>{date}</time>
       {recommendations.length ? (
         <ol role="list" className="mt-4 space-y-4">
