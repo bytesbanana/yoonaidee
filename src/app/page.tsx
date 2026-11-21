@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Clock3, MapPin, UserRound } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Clock3, UserRound } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Yoo Nai Dee | Short stays in Bangkok",
@@ -15,18 +15,8 @@ const destinations = [
 
 export default function Home() {
   return (
-    <main className="min-h-dvh bg-[#f8f7f2] px-5 pb-12 text-[#172c24] [font-family:var(--font-geist-sans),sans-serif] sm:px-8 lg:px-12">
+    <main className="min-h-dvh bg-[#f8f7f2] px-5 pt-5 pb-12 text-[#172c24] [font-family:var(--font-geist-sans),sans-serif] sm:px-8 sm:pt-7 lg:px-12">
       <div className="mx-auto max-w-6xl">
-        <header className="flex items-center gap-3 py-5 sm:py-7">
-          <span className="grid size-10 place-items-center rounded-2xl bg-[#164334] text-white">
-            <MapPin aria-hidden="true" className="size-5" />
-          </span>
-          <div className="leading-tight">
-            <p className="font-semibold tracking-tight">Yoo Nai Dee</p>
-            <p lang="th" className="text-xs text-[#52645a]">อยู่ไหนดี</p>
-          </div>
-        </header>
-
         <section className="grid overflow-hidden rounded-[2rem] bg-[#163a2f] text-[#faf8ed] md:grid-cols-[1fr_1fr]">
           <div className="flex flex-col items-start justify-center px-6 py-9 sm:px-10 md:py-12 lg:px-14 lg:py-16">
             <h1 className="max-w-lg font-serif text-[clamp(2.65rem,5vw,4.4rem)] leading-[1.02] tracking-[-0.05em]">
