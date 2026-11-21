@@ -94,6 +94,20 @@ export function hasCompleteWeights(categories: Pick<PreferenceCategory, "weight"
     && categories.reduce((sum, { weight }) => sum + (weight ?? 0), 0) === 100;
 }
 
+export function resolveProfileWeights<T extends { weight: number | null }>(rows: T[]) {
+  const allocated = rows.reduce((sum, { weight }) => sum + (weight ?? 0), 0);
+  const missing = rows.filter(({ weight }) => weight === null).length;
+  const remaining = 100 - allocated;
+  if (remaining < missing) return null;
+
+  const share = missing > 0 ? Math.floor(remaining / missing) : 0;
+  let extra = missing > 0 ? remaining % missing : 0;
+  return rows.map((row) => ({
+    ...row,
+    weight: row.weight ?? (share + (extra-- > 0 ? 1 : 0)),
+  }));
+}
+
 export function suggestWeights(categories: PreferenceCategory[]) {
   const allocated = categories.reduce((sum, { weight }) => sum + (weight ?? 0), 0);
   const missing = categories.filter(({ weight }) => weight === null).length;

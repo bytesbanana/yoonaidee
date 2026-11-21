@@ -14,6 +14,7 @@ import {
   profileCategoryPresets,
   isGoogleMapsLink,
   preferencePlaces,
+  resolveProfileWeights,
   type PreferenceCategory,
 } from "@/lib/preferences/categories";
 import { capitalizeWords } from "@/lib/format-text";
@@ -127,14 +128,22 @@ function PriorityEditor({
   const [resetOpen, setResetOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState("");
-  const total = rows.reduce((sum, { value }) => sum + Number(value), 0);
-  const locationsValid = rows.every(({ locationText }) => preferencePlaces.safeParse(locationsFromText(locationText)).success);
-  const valid = rows.every(({ value }) => !value || Number(value) >= 1) && total <= 100 && locationsValid;
+  const weights = rows.map(({ category, value, locationText }) => ({
+    category,
+    weight: value ? Number(value) : null,
+    places: locationsFromText(locationText),
+  }));
+  const total = weights.reduce((sum, { weight }) => sum + (weight ?? 0), 0);
+  const hasBlankWeights = weights.some(({ weight }) => weight === null);
+  const percentagesValid = weights.every(({ weight }) => weight === null || weight >= 1);
+  const resolvedWeights = percentagesValid ? resolveProfileWeights(weights) : null;
+  const locationsValid = weights.every(({ places }) => preferencePlaces.safeParse(places).success);
   const previous = toRows(saved?.categories ?? []);
-  const changed = rows.length !== previous.length || rows.some(({ category, value, locationText }, index) =>
-    previous[index]?.category !== category || Number(previous[index]?.value) !== Number(value)
-    || previous[index]?.locationText !== locationsFromText(locationText).join("\n"),
+  const changed = weights.length !== previous.length || weights.some(({ category, weight, places }, index) =>
+    previous[index]?.category !== category || Number(previous[index]?.value) !== (weight ?? 0)
+    || previous[index]?.locationText !== places.join("\n"),
   );
+  const canSave = resolvedWeights !== null && locationsValid && (changed || hasBlankWeights);
   const usedCategories = new Set(rows.map(({ category }) => categoryKey(category)));
   const available = profileCategoryPresets.filter((category) => !usedCategories.has(categoryKey(category)));
   const candidate = selected === "custom" ? categoryFromName(customName) : selected;
@@ -178,7 +187,7 @@ function PriorityEditor({
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!valid || !changed || busy || message) return;
+    if (!canSave || busy || message) return;
     const headers = getAuthHeaders();
     if (!headers) {
       setError("Sign in with LINE again to save your priorities.");
@@ -194,11 +203,7 @@ function PriorityEditor({
         body: JSON.stringify({
           sessionId: saved?.sessionId ?? null,
           version: saved?.version ?? null,
-          weights: rows.map(({ category, value, locationText }) => ({
-            category,
-            weight: value ? Number(value) : null,
-            places: locationsFromText(locationText),
-          })),
+          weights,
         }),
       });
       const result = await response.json();
@@ -247,7 +252,7 @@ function PriorityEditor({
     <form onSubmit={save} aria-labelledby="lifestyle-priorities" className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
       <div className="bg-emerald-950 p-5 text-white sm:p-6">
         <h2 id="lifestyle-priorities" className="text-2xl font-semibold tracking-tight">Lifestyle priorities</h2>
-        <p className="mt-1 text-sm text-emerald-50/85">Allocate up to 100% across the places that matter to you.</p>
+        <p className="mt-1 text-sm text-emerald-50/85">Allocate up to 100% across the places that matter to you. Blank percentages share the remainder on save.</p>
         <div className="mt-5 flex items-baseline justify-between gap-2 text-sm">
           <span className="font-medium">Total allocated</span>
           <output className="tabular-nums"><strong className="text-xl">{total}%</strong><span className="text-emerald-50/75"> / 100%</span></output>
@@ -302,10 +307,11 @@ function PriorityEditor({
           </div>
           {rows.length === 0 && <p className="px-5 py-5 text-sm text-stone-600 sm:px-6">No categories selected.</p>}
             <ul className="divide-y divide-stone-100 px-5 sm:px-6">
-              {rows.map(({ category, locationText, value }) => {
+              {rows.map(({ category, locationText, value }, index) => {
                 const label = formatPriorityCategory(category);
                 const Icon = categoryIcons[category] ?? MapPin;
-                const places = locationsFromText(locationText);
+                const { places } = weights[index];
+                const defaultWeight = value ? undefined : resolvedWeights?.[index]?.weight;
                 const locationLabel = places.map(formatPriorityLocation).join(" · ");
                 return (
                   <li key={category} className="grid grid-cols-[minmax(0,1fr)_4.75rem_2.75rem] items-center gap-2 sm:gap-3 py-4">
@@ -316,8 +322,9 @@ function PriorityEditor({
                       <div className="min-w-0 flex-1">
                         <p className="break-words font-semibold leading-tight">{label}</p>
                         <p className="mt-1 break-words text-xs text-stone-600">{locationLabel || "Any Nearby"}</p>
+                        {defaultWeight !== undefined && <p className="mt-1 text-xs text-emerald-800">{defaultWeight}% on save</p>}
                         <div aria-hidden className="mt-2 h-1.5 max-w-48 overflow-hidden rounded-full bg-stone-100">
-                          <div className="h-full rounded-full bg-emerald-600" style={{ width: `${Number(value)}%` }} />
+                          <div className="h-full rounded-full bg-emerald-600" style={{ width: `${defaultWeight ?? Number(value)}%` }} />
                         </div>
                       </div>
                     </div>
@@ -389,14 +396,16 @@ function PriorityEditor({
                   limitMessage ||
                   (total > 100 ? `Remove ${total - 100}% to reach 100%.` :
                     !locationsValid ? "Enter up to five locations per category using place names, addresses, or Google Maps links." :
-                      !valid ? "Enter a percentage from 1 to 100, or leave it blank." :
-                      total < 100 ? `${100 - total}% left to allocate.` : "100% allocated.")}
+                      !percentagesValid ? "Enter a percentage from 1 to 100, or leave it blank." :
+                        !resolvedWeights ? "Lower another weight to leave at least 1% for each blank category." :
+                          hasBlankWeights ? `${100 - total}% will be assigned to blank categories on save.` :
+                            total < 100 ? `${100 - total}% left to allocate.` : "100% allocated.")}
               </p>
             )}
             {status === "conflict" ? (
               <button type="button" onClick={reload} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">Reload saved priorities</button>
             ) : (
-              <button type="submit" disabled={!valid || !changed || busy} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:bg-stone-200 disabled:text-stone-600">
+              <button type="submit" disabled={!canSave || busy} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:bg-stone-200 disabled:text-stone-600">
                 {status === "saving" ? "Saving…" : "Save priorities"}
               </button>
             )}

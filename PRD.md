@@ -61,6 +61,9 @@ The Mini App home opens directly to **Your recommendations**. After LINE sign-in
 
 If work location, budget, or travel mode is unclear enough to change results, ask. Optional fields get explicit defaults. If user says “start searching,” proceed using stated assumptions unless a hard constraint is unresolved.
 
+### Profile weight defaults
+On **Save priorities**, `/profile` splits the remaining percentage among selected categories with blank weights and stores the resulting whole numbers. Earlier blank rows receive any rounding remainder. Explicit weights stay unchanged; if there’s less than 1% available per blank row, lower a weight before saving. Fully specified weights can total less than 100%. Opening `/profile` does not update saved weights.
+
 ### Recommendation behavior
 - Search only the prepared set of neighborhoods (e.g. Bangkok top 20 snapshot).
 - Distinguish hard constraints (budget ceiling when supported) from preferences (cafe access, commute weight).

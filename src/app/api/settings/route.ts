@@ -1,7 +1,7 @@
 import { authenticateLine } from "@/lib/line/verify-liff";
 import { intakePool, intakeTransaction } from "@/lib/db/intake-db";
 import { z } from "zod";
-import { categoryId, categoryKey, maxPreferenceCategories, preferenceCategories, preferencePlaces } from "@/lib/preferences/categories";
+import { categoryId, categoryKey, maxPreferenceCategories, preferenceCategories, preferencePlaces, resolveProfileWeights } from "@/lib/preferences/categories";
 import { normalizeCategoryLocations } from "@/lib/preferences/locations";
 
 const storedProfile = z.object({
@@ -117,7 +117,11 @@ export async function PATCH(request: Request) {
       return json({ error: "The combined percentage must be at most 100%." }, 400);
     }
 
-    const { sessionId, version, weights } = update.data;
+    const { sessionId, version } = update.data;
+    const weights = resolveProfileWeights(update.data.weights);
+    if (!weights) {
+      return json({ error: "Lower another weight to leave at least 1% for each blank category." }, 400);
+    }
     if (new Set(weights.map(({ category }) => categoryKey(category))).size !== weights.length) {
       return json({ error: "Each category can only be added once." }, 400);
     }
