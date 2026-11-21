@@ -1,6 +1,7 @@
 import { setTimeout as pause } from "node:timers/promises";
 import { processConversation } from "../src/lib/agent/conversation";
 import { intakeTransaction } from "../src/lib/db/intake-db";
+import { buildIntakeFlex, type IntakeLineMessage } from "../src/lib/line/intake-flex";
 
 type ConversationJob = {
   id: string;
@@ -103,7 +104,11 @@ async function runConversation() {
        VALUES ($1, $2, $3, 'CONVERSATION_MESSAGE', $4)`,
       [job.user_id, job.session_id, `intake:${job.id}`, {
         messageId: message.id,
-        messages: [{ type: "text", text: reply }],
+        messages: [buildIntakeFlex({
+          reply,
+          language: result.profile.language,
+          needsClarification: result.question !== null,
+        })],
       }],
     );
     await client.query(
@@ -127,7 +132,7 @@ type Notification = {
   job_id: string;
   attempts: number;
   max_attempts: number;
-  payload: { messageId?: string; messages: { type: "text"; text: string }[] };
+  payload: { messageId?: string; messages: IntakeLineMessage[] };
 };
 
 async function deliverIntakeMessage() {
