@@ -32,9 +32,16 @@ const headers = { "Cache-Control": "private, no-store" };
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
 
 async function authenticate(request: Request) {
-  const channelId = process.env.LINE_LOGIN_CHANNEL_ID;
-  if (!channelId || !process.env.DATABASE_URL) {
-    return json({ error: "Settings service is not configured." }, 503);
+  // The LIFF ID is deployment configuration. Never choose the expected channel from a request token.
+  const liffChannelId = process.env.NEXT_PUBLIC_LIFF_ID?.trim().match(/^(\d+)-[a-zA-Z0-9]+$/)?.[1];
+  const channelId = process.env.LINE_LOGIN_CHANNEL_ID?.trim() || liffChannelId;
+  const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim());
+  if (!channelId || !databaseConfigured) {
+    console.error("line.settings.missing_config", {
+      lineChannelConfigured: Boolean(channelId),
+      databaseConfigured,
+    });
+    return json({ error: "Profile settings are unavailable. Try again shortly." }, 503);
   }
 
   const token = request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
