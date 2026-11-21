@@ -23,6 +23,7 @@ const profileFields = z.object({
   }),
   categories: preferenceCategories,
   propertyTypes: z.array(z.enum(["condo", "village", "apartment", "house", "townhouse"])).max(5),
+  noPropertyTypePreference: z.boolean(),
   propertyTypesAreRequired: z.boolean(),
   minAreaSqm: z.number().positive().nullable(),
   furnished: z.boolean().nullable(),
@@ -82,7 +83,7 @@ A concrete daily destination can be a workplace, school, station, or landmark. S
 A remote worker with no area preference yet needs an area question. Correct clear spelling mistakes in place names or addresses only when the intended place is unambiguous. Keep the original spelling if uncertain. Never guess a destination or resolve coordinates.
 Extract an explicit upper monthly rent in THB; use the upper end of an explicit monthly rent range. Never turn an annual, purchase, foreign-currency or unclear budget into monthly THB rent. Clarify if needed.
 Only use flexible transport when the user explicitly says any mode is fine.
-Recognize Thai and English housing types, including คอนโด, หมู่บ้าน (village/housing estate), อพาร์ตเมนต์, and บ้าน.
+Housing type needs an explicit answer: extract all stated types (Thai or English), including คอนโด, หมู่บ้าน (village/housing estate), อพาร์ตเมนต์, and บ้าน. If asked about housing type, interpret a short answer like “Any type” or “แบบไหนก็ได้” as no type preference: clear propertyTypes and set noPropertyTypePreference to true. Also do this if the user explicitly says they have no housing type preference elsewhere in the interview. Do not infer this from silence, a search command, or flexibility about another field. Preserve a saved housing type answer unless the user changes it. Default noPropertyTypePreference to false when unknown or when types are specified.
 Use these predefined lifestyle categories where they fit (key, English label / Thai label): ${Object.entries(categoryLabels).map(([id, names]) => id + ": " + names.join(" / ")).join("; ")}.
 Return one row per selected category. A named branch, station, workplace or other location goes in places. An empty places list means any nearby option is fine. Preserve Google Maps links exactly as provided. Preserve previously selected categories and their weights unless the user changes or removes them. Migrate any legacy lifestyle entries mentioned in the saved profile into matching categories when no weighted catalog exists.
 Use the closest predefined category when it matches. Preserve existing custom categories exactly unless the user changes or removes them. For an explicitly requested category without a match, use custom: followed by the user’s category name, up to 60 characters.
@@ -114,7 +115,8 @@ function toProfile(
     ),
     housing: {
       propertyTypes: [...new Set(fields.propertyTypes)],
-      propertyTypesAreRequired: fields.propertyTypesAreRequired,
+      ...(fields.noPropertyTypePreference && fields.propertyTypes.length === 0 ? { noPropertyTypePreference: true } : {}),
+      propertyTypesAreRequired: fields.propertyTypes.length > 0 && fields.propertyTypesAreRequired,
       minAreaSqm: fields.minAreaSqm,
       furnished: fields.furnished,
     },
@@ -126,6 +128,7 @@ const questions = {
     destination: "ปกติเดินทางไปทำงานหรือไปที่ไหนบ่อยที่สุดครับ? ถ้าไม่มี บอกย่านหรือเมืองที่อยากเริ่มหาได้เลย",
     budget: "งบค่าเช่าสูงสุดต่อเดือนประมาณกี่บาทครับ?",
     transport: "ปกติเดินทางด้วยอะไรเป็นหลักครับ เช่น BTS/MRT รถยนต์ มอเตอร์ไซค์ หรือเดิน?",
+    housing: "อยากเช่าที่พักแบบไหนครับ เช่น คอนโด อพาร์ตเมนต์ หรือบ้าน? เลือกได้หลายแบบ หรือบอกว่าแบบไหนก็ได้ครับ",
     lifestyleInvite: "ถ้ามีอะไรที่อยากให้อยู่ใกล้บ้านเป็นพิเศษ เช่น สวนไว้ไปวิ่ง ยิมที่ไปประจำ หรือตลาด ก็บอกได้เลยครับ",
     confirmSearch: "ข้อมูลพร้อมแล้วครับ พร้อมให้เริ่มค้นหาย่านไหมครับ? พิมพ์ “ค้นหา” เพื่อเริ่ม หรือบอกข้อมูลที่อยากแก้ไขได้เลย",
     editPreferences: "อยากแก้ไขข้อมูลอะไรครับ? บอกความต้องการใหม่ได้เลย",
@@ -135,6 +138,7 @@ const questions = {
     destination: "Where do you work or travel to most often? If you have no regular commute, which city or area should we search?",
     budget: "What's your maximum monthly rent in Thai baht?",
     transport: "How do you usually get around, for example BTS/MRT, car, motorcycle, or walking?",
+    housing: "What kind of place would you like to rent: a condo, apartment, house, or something else? You can name multiple types or say any type is fine.",
     lifestyleInvite: "If there’s anything you’d like close to home, like a park for running, your regular gym, or a market, feel free to mention it too.",
     confirmSearch: "Ready to start searching for neighborhoods? Reply “search” to start, or tell me what you’d like to change.",
     editPreferences: "What would you like to change? Tell me your updated preferences.",
@@ -164,6 +168,12 @@ function withAnchor(fields: z.infer<typeof profileFields>, previousProfile: unkn
   return [...categories.values()];
 }
 
+function housingQuestion(language: "th" | "en") {
+  const options = language === "th" ? ["คอนโด", "อพาร์ตเมนต์", "แบบไหนก็ได้"] : ["Condo", "Apartment", "Any type"];
+  const question = questions[language].housing;
+  return { ready: false, question, reply: question, suggestions: options.map((text) => ({ label: text, text })) };
+}
+
 export function evaluateConversation(output: unknown, previousProfile?: unknown) {
   const { profile, language } = extractionSchema.parse(output);
   const fields = {
@@ -174,6 +184,10 @@ export function evaluateConversation(output: unknown, previousProfile?: unknown)
   const copy = questions[language];
   const kind = !fields.destination ? "destination" : !fields.maxMonthlyRent ? "budget"
     : !fields.primaryTransport ? "transport" : "confirmSearch";
+  const saved = toProfile(fields, language, withAnchor(fields, previousProfile));
+  if (kind === "confirmSearch" && !hasHousingAnswer(saved.housing)) {
+    return { profile: saved, ...housingQuestion(language) };
+  }
   let question: string = copy[kind];
   if (kind === "transport") {
     const hasLifestyle = fields.categories.some(({ category }) => !["work", "school", "transit", "expressway"].includes(category))
@@ -181,7 +195,7 @@ export function evaluateConversation(output: unknown, previousProfile?: unknown)
     question = hasLifestyle ? copy.transport : `${copy.transport}\n${copy.lifestyleInvite}`;
   }
   const suggestions = kind === "confirmSearch" ? searchSuggestions[language] : getSuggestions(output, kind, language);
-  return { profile: toProfile(fields, language, withAnchor(fields, previousProfile)), ready: false, question, reply: question, suggestions };
+  return { profile: saved, ready: false, question, reply: question, suggestions };
 }
 
 // Recognize weight prompts saved before weights became optional.
@@ -214,7 +228,15 @@ const savedSearchProfile = z.looseObject({
   destinations: z.array(z.looseObject({ name: profileFields.shape.destination.unwrap() })).min(1),
   budget: z.looseObject({ maxMonthlyRent: profileFields.shape.maxMonthlyRent.unwrap() }),
   transport: z.looseObject({ primary: profileFields.shape.primaryTransport.unwrap() }),
+  housing: z.looseObject({
+    propertyTypes: profileFields.shape.propertyTypes.optional(),
+    noPropertyTypePreference: z.boolean().optional(),
+  }).optional(),
 });
+
+function hasHousingAnswer(housing: z.infer<typeof savedSearchProfile>["housing"]) {
+  return Boolean(housing?.propertyTypes?.length || housing?.noPropertyTypePreference === true);
+}
 
 export async function processConversation(input: {
   message: string;
@@ -229,6 +251,7 @@ export async function processConversation(input: {
       if (editCommand.test(message)) {
         return { profile: saved.data, ready: false, question: copy.editPreferences, reply: copy.editPreferences, suggestions: undefined };
       }
+      if (!hasHousingAnswer(saved.data.housing)) return { profile: saved.data, ...housingQuestion(saved.data.language) };
       return { profile: saved.data, ready: true, question: null, reply: copy.ready, suggestions: undefined };
     }
   }
@@ -238,18 +261,20 @@ export async function processConversation(input: {
     : null;
   if (confirmed && savedSearchProfile.safeParse(input.previousProfile).success) {
     const previous = input.previousProfile as ReturnType<typeof toProfile>;
+    const profile = {
+      ...previous,
+      destinations: previous.destinations?.map((destination) => ({
+        ...destination,
+        name: normalizeLocation(destination.name, 200),
+      })) ?? [],
+      categories: suggestWeights(confirmed).map((category) => ({
+        ...category,
+        places: normalizeCategoryLocations(category.places),
+      })),
+    };
+    if (!hasHousingAnswer(profile.housing)) return { profile, ...housingQuestion(previous.language) };
     return {
-      profile: {
-        ...previous,
-        destinations: previous.destinations?.map((destination) => ({
-          ...destination,
-          name: normalizeLocation(destination.name, 200),
-        })) ?? [],
-        categories: suggestWeights(confirmed).map((category) => ({
-          ...category,
-          places: normalizeCategoryLocations(category.places),
-        })),
-      },
+      profile,
       ready: false,
       question: questions[previous.language].confirmSearch,
       reply: questions[previous.language].confirmSearch,

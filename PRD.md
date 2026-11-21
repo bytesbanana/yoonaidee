@@ -46,7 +46,7 @@ The Mini App home opens directly to **Your next stay**. After LINE sign-in, it s
 
 1. User sends a free-form LINE message.
 2. Webhook loads PostgreSQL memory by verified LINE user ID. It silently acknowledges messages while that user has an active analysis.
-3. Webhook uses Codex to update preferences. Missing destination, budget, or transport gets a text question with no job. If no lifestyle preference is known, the transport question also invites the user to mention what they want near home. Answering only the transport question is enough to finish the interview; no lifestyle turn or weights required. Clarifications show two or three context-specific LINE quick replies when useful; otherwise the bot asks for a typed answer. Tapping one sends a normal text message; users can always type their own answer. Once destination, budget, and transport are known, the bot asks for confirmation and offers localized Search and Change preferences buttons. An explicit confirmation queues one `ANALYSIS` job with the saved profile snapshot and triggers a Flex push.
+3. Webhook uses Codex to update preferences. Missing destination, budget, transport, or housing type gets a text question with no job. If no lifestyle preference is known, the transport question also invites the user to mention what they want near home. Housing type can be one or more types or an explicit “any type”; no lifestyle turn or weights required. Clarifications show two or three context-specific LINE quick replies when useful; otherwise the bot asks for a typed answer. Tapping one sends a normal text message; users can always type their own answer. Once destination, budget, transport, and housing type are answered, the bot asks for confirmation and offers localized Search and Change preferences buttons. An explicit confirmation queues one `ANALYSIS` job with the saved profile snapshot and triggers a Flex push.
 4. Research agent calls neighborhood tools, compares options, and returns structured recommendations.
 5. A deterministic function computes/verifies numerical scores when feature values exist; AI explains trade-offs without fabricating numbers.
 6. LINE sends a Flex summary with an optional LIFF results link.
@@ -57,9 +57,10 @@ The Mini App home opens directly to **Your next stay**. After LINE sign-in, it s
 - `workplace`: named destination, ideally resolved to coordinates before commute claims.
 - `budget.max`: positive integer THB/month.
 - `transport.primary`: BTS/MRT, driving, walking, other or unknown.
+- `housing.propertyTypes`: one or more types, or explicit flexibility (`housing.noPropertyTypePreference`).
 - `lifestyle`: optional interests and importance.
 
-If work location, budget, or travel mode is unclear enough to change results, ask. Optional fields get explicit defaults. If user says “start searching,” proceed using stated assumptions unless a hard constraint is unresolved.
+Ask about missing or unclear required fields. Optional fields get explicit defaults. Start searching only after all required answers and an explicit confirmation.
 
 ### Profile weight defaults
 On **Save priorities**, `/profile` splits the remaining percentage among selected categories with blank weights and stores the resulting whole numbers. Earlier blank rows receive any rounding remainder. Explicit weights stay unchanged; if there’s less than 1% available per blank row, lower a weight before saving. Fully specified weights can total less than 100%. Opening `/profile` does not update saved weights.
