@@ -4,10 +4,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { DEMO_ZONES } from "../demo-zones";
+import { findPastResult } from "../demo-results";
 
 const formatRent = new Intl.NumberFormat("en-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 });
 
-type ZonePageProps = { params: Promise<{ zone: string }> };
+type ZonePageProps = {
+  params: Promise<{ zone: string }>;
+  searchParams: Promise<{ version?: string | string[] }>;
+};
 
 async function getZone(params: ZonePageProps["params"]) {
   const { zone } = await params;
@@ -25,14 +29,16 @@ export async function generateMetadata({ params }: ZonePageProps): Promise<Metad
   return { title: `${zone.name} | Yoo Nai Dee` };
 }
 
-export default async function ZonePage({ params }: ZonePageProps) {
+export default async function ZonePage({ params, searchParams }: ZonePageProps) {
   const zone = await getZone(params);
+  const pastResult = findPastResult((await searchParams).version);
+  const backHref = pastResult ? `/recommendations?version=${pastResult.version}` : "/recommendations";
 
   return (
     <>
-      <Link href="/recommendations" className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[#164334] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4">
+      <Link href={backHref} className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[#164334] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4">
         <ArrowLeft aria-hidden="true" className="size-4" />
-        All zones
+        {pastResult ? `Back to version ${pastResult.version}` : "All zones"}
       </Link>
 
       <header className="mt-4 overflow-hidden rounded-[2rem] bg-[#163a2f] text-[#faf8ed]">

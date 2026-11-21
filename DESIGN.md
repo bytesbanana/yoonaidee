@@ -36,6 +36,7 @@ Spacing scale: Tailwind default (`p-4`, `p-6`, `gap-2`, `gap-4`). Type scale: `t
 ### Recommendations page
 
 - Show five demo zone cards with illustrative photography. Each card opens a zone page with sample properties and a link back to the list. Show a photo, monthly rent, floor area, and amenities on each property card.
+- Use Current and History navigation tabs. List older versions newest first and preserve the selected version when going back from a zone.
 
 
 ### Profile page
