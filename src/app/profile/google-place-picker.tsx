@@ -71,6 +71,13 @@ export function GooglePlacePicker({ categoryLabel, onSelect }: {
   const [open, setOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
   const host = useRef<HTMLDivElement>(null);
+  const localizePicker = useEffectEvent((picker: HTMLElement) => {
+    const label = translate(language, "Search Google Maps for {category}", { category: categoryLabel });
+    picker.setAttribute("aria-label", label);
+    picker.setAttribute("placeholder", label);
+    picker.setAttribute("requested-language", language);
+  });
+
   const choosePlace = useEffectEvent((event: Event) => {
     const { placeId } = (event as PlaceSelectEvent).placePrediction;
     if (!placeId) return;
@@ -100,7 +107,7 @@ export function GooglePlacePicker({ categoryLabel, onSelect }: {
       if (!active) return;
 
       picker = new PlaceAutocompleteElement();
-      picker.setAttribute("aria-label", translate(language, "Search Google Maps for {category}", { category: categoryLabel }));
+      localizePicker(picker);
       picker.style.width = "100%";
       picker.addEventListener("gmp-select", onPlace);
       picker.addEventListener("gmp-error", onError);
@@ -114,7 +121,12 @@ export function GooglePlacePicker({ categoryLabel, onSelect }: {
       picker?.removeEventListener("gmp-error", onError);
       picker?.remove();
     };
-  }, [categoryLabel, language, open]);
+  }, [open]);
+
+  useEffect(() => {
+    const picker = host.current?.firstElementChild;
+    if (picker instanceof HTMLElement) localizePicker(picker);
+  }, [categoryLabel, language]);
 
   if (!mapsKey) {
     return (

@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { analysisDisplayText } from "@/lib/analyses/display";
 import type { SavedAnalysis } from "@/lib/analyses/result";
 import { lineAuthHeaders } from "@/lib/line/liff-auth";
 import { useLiff } from "../providers/LiffProvider";
 import { useLanguage } from "../providers/language-provider";
+import { useContentTranslation } from "../providers/use-content-translation";
 import { AnalysisLoading } from "./analysis-loading";
 
 type LoadState =
@@ -18,7 +20,7 @@ export function AnalysisLoader({ resultId = null, zone = false, header, children
   resultId?: string | null;
   zone?: boolean;
   header: ReactNode;
-  children: (analysis: SavedAnalysis | null) => ReactNode;
+  children: (analysis: SavedAnalysis | null, localize: (text: string) => string) => ReactNode;
 }) {
   const { t } = useLanguage();
   const { liffObject, liffError, isReady } = useLiff();
@@ -52,6 +54,9 @@ export function AnalysisLoader({ resultId = null, zone = false, header, children
     return () => controller.abort();
   }, [isReady, liffObject, resultId]);
 
+  const analysis = state.status === "loaded" ? state.analysis : null;
+  const { localize, status } = useContentTranslation(analysis ? [analysis.destination, ...analysisDisplayText(analysis.result)] : []);
+
   const needsLogin = isReady && liffObject && !liffObject.isLoggedIn();
   if (!liffError && !needsLogin && state.status === "loading") return <AnalysisLoading zone={zone} />;
 
@@ -65,7 +70,12 @@ export function AnalysisLoader({ resultId = null, zone = false, header, children
             {t("Sign in with LINE")}
           </button>
         ) : state.status === "error" ? <p className="mt-4" role="alert">{t(state.message)}</p>
-          : state.status === "loaded" && children(state.analysis)}
+          : state.status === "loaded" && (
+            <>
+              {status && <p role="status" className="mt-2 text-sm text-[#52645a]">{status}</p>}
+              {children(analysis, localize)}
+            </>
+          )}
     </>
   );
 }

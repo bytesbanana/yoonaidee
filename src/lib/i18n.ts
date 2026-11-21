@@ -7,8 +7,13 @@ export const pageTitles = {
   settings: "Housing preferences",
 } as const;
 
+export const siteDescription = "See your latest Bangkok neighborhood recommendations.";
+
 const thai: Record<string, string> = {
   "Language": "ภาษา",
+  "Translating…": "กำลังแปล…",
+  "Translation unavailable. Showing original text.": "แปลไม่ได้ในขณะนี้ กำลังแสดงข้อความต้นฉบับ",
+  [siteDescription]: "ดูคำแนะนำย่านที่อยู่อาศัยล่าสุดของคุณในกรุงเทพฯ",
   "English": "อังกฤษ",
   "Thai": "ไทย",
   "Yoo Nai Dee": "อยู่ไหนดี",
@@ -162,4 +167,13 @@ const thai: Record<string, string> = {
 export function translate(language: Language, message: string, values?: Record<string, string | number>) {
   const template = language === "th" && Object.hasOwn(thai, message) ? thai[message] : message;
   return values ? template.replace(/\{(\w+)\}/g, (match, key) => String(values[key] ?? match)) : template;
+}
+
+const english = new Map<string, string>();
+for (const [original, localized] of Object.entries(thai)) {
+  if (!english.has(localized)) english.set(localized, original);
+}
+
+export function translateContentLabel(language: Language, text: string) {
+  return language === "th" ? translate(language, text) : english.get(text) ?? text;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from "react";
-import { pageTitles, translate, type Language } from "@/lib/i18n";
+import { pageTitles, siteDescription, translate, type Language } from "@/lib/i18n";
 
 const LanguageContext = createContext<Language>("en");
 const languageKey = "yoo_nai_dee_language";
@@ -61,7 +61,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute("lang", language);
 
-    function localizeTitle() {
+    function localizeMetadata() {
+      const description = document.head.querySelector<HTMLMetaElement>('meta[name="description"]');
+      const localizedDescription = translate(language, siteDescription);
+      if (description && description.content !== localizedDescription) description.content = localizedDescription;
+
       const title = document.head.querySelector("title");
       const current = title?.textContent;
       const localized = localizedTitles.find(({ en, th }) => current === en || current === th)?.[language];
@@ -69,9 +73,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
 
     // Next replaces the title as route metadata streams in.
-    const observer = new MutationObserver(localizeTitle);
-    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
-    localizeTitle();
+    const observer = new MutationObserver(localizeMetadata);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["content"] });
+    localizeMetadata();
     return () => observer.disconnect();
   }, [language]);
 

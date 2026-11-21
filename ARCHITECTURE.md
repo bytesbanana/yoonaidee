@@ -10,6 +10,8 @@ Codex returns intake answer suggestions alongside profile extraction. The app sh
 
 The `/profile` page shows a full-screen loading indicator during navigation and while LINE and saved preferences load. The page then shows the profile, a sign-in prompt, or an error message.
 
+The Mini App localizes interface copy in the browser. For saved recommendation and profile text, the browser sends bounded batches to the LINE-authenticated `/api/translations` route. The route uses the server’s `OPENAI_API_KEY` for translation. The browser caches translations for the active visit and shows the source text while loading or if translation fails. Scores, links, IDs, and editable profile values continue to use the saved data.
+
 ## 1. High-level design
 
 ```mermaid

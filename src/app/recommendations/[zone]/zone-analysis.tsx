@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { formatTransport } from "@/lib/preferences/display";
-import { normalizeLocation } from "@/lib/preferences/locations";
+import { formatAnalysisLabel, formatCommuteSource } from "@/lib/analyses/display";
 import type { ZoneResult } from "@/lib/analyses/result";
 import { useLanguage } from "../../providers/language-provider";
 import { AnalysisLoader } from "../analysis-loader";
@@ -23,52 +23,54 @@ export function ZoneAnalysis() {
 
   return (
     <AnalysisLoader key={`${zone}:${resultId ?? ""}`} zone resultId={resultId} header={back}>
-      {(analysis) => {
+      {(analysis, localize) => {
         const zones = analysis?.result.recommendations ?? [];
         const index = zones.findIndex(({ zoneId }) => zoneId === zone);
         const match = zones[index];
-        return match ? <ZoneDetails zone={match} index={index} /> : <p className="mt-4">{t("This zone is unavailable in the saved analysis.")}</p>;
+        return match ? <ZoneDetails zone={match} index={index} localize={localize} /> : <p className="mt-4">{t("This zone is unavailable in the saved analysis.")}</p>;
       }}
     </AnalysisLoader>
   );
 }
 
-function ZoneDetails({ zone, index }: { zone: ZoneResult; index: number }) {
-  const { language, t } = useLanguage();
+function ZoneDetails({ zone, index, localize }: {
+  zone: ZoneResult;
+  index: number;
+  localize: (text: string) => string;
+}) {
+  const { t } = useLanguage();
   const scores = Object.entries(zone.scores ?? {}).filter(([, score]) => score !== null);
   const commute = [
     zone.commute?.minutes != null ? t("{minutes} min", { minutes: zone.commute.minutes }) : null,
-    zone.commute?.mode && formatTransport(zone.commute.mode, language),
-    zone.commute?.source && (/^[a-z0-9_-]+$/i.test(zone.commute.source)
-      ? t(normalizeLocation(zone.commute.source.replace(/[_-]/g, " ")))
-      : zone.commute.source),
+    zone.commute?.mode && localize(formatTransport(zone.commute.mode)),
+    zone.commute?.source && localize(formatCommuteSource(zone.commute.source)),
   ].filter(Boolean).join(" · ");
 
   return (
     <>
       <header className="mt-3 overflow-hidden rounded-[2rem] bg-[#163a2f] text-[#faf8ed]">
         <div className="p-6 sm:px-9">
-          <h1 className="font-serif text-4xl tracking-tight [overflow-wrap:anywhere] sm:text-5xl">{zone.zoneName}</h1>
+          <h1 className="font-serif text-4xl tracking-tight [overflow-wrap:anywhere] sm:text-5xl">{localize(zone.zoneName)}</h1>
           {zone.overallScore != null && <p className="mt-3">{t("Overall score {score}", { score: zone.overallScore })}</p>}
         </div>
         <ZoneArtwork index={index} rank={zone.rank ?? index + 1} detail />
       </header>
       <div className="mt-5 space-y-5">
-        {zone.reasoning && <p className="leading-relaxed">{zone.reasoning}</p>}
+        {zone.reasoning && <p className="leading-relaxed">{localize(zone.reasoning)}</p>}
         {commute && <section><h2 className="font-semibold">{t("Commute")}</h2><p>{commute}</p></section>}
         {scores.length > 0 && (
           <section>
             <h2 className="font-semibold">{t("Score breakdown")}</h2>
             <dl className="mt-2 grid grid-cols-2 gap-2 rounded-2xl bg-white p-4">
               {scores.map(([name, score]) => (
-                <div key={name}><dt>{t(normalizeLocation(name.replace(/[_-]/g, " ")))}</dt><dd className="font-semibold">{score}</dd></div>
+                <div key={name}><dt>{localize(formatAnalysisLabel(name))}</dt><dd className="font-semibold">{score}</dd></div>
               ))}
             </dl>
           </section>
         )}
-        <DetailsList title={t("Advantages")} items={zone.pros} />
-        <DetailsList title={t("Trade-offs")} items={zone.cons} />
-        <DetailsList title={t("Nearby places")} items={zone.nearbyPlaces.map(({ name }) => name)} />
+        <DetailsList title={t("Advantages")} items={zone.pros.map(localize)} />
+        <DetailsList title={t("Trade-offs")} items={zone.cons.map(localize)} />
+        <DetailsList title={t("Nearby places")} items={zone.nearbyPlaces.map(({ name }) => localize(name))} />
       </div>
     </>
   );

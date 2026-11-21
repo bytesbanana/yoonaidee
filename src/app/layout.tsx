@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/components/query-provider";
 import type { Metadata } from "next";
+import { siteDescription } from "@/lib/i18n";
 import { LanguageProvider } from "./providers/language-provider";
 import { LiffProvider } from "./providers/LiffProvider";
 import "./globals.css";
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: { default: "Yoo Nai Dee", template: "%s | Yoo Nai Dee" },
-  description: "See your latest Bangkok neighborhood recommendations.",
+  description: siteDescription,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
+import { useContentTranslation } from "../providers/use-content-translation";
 import { useLanguage } from "../providers/language-provider";
 import { GooglePlacePicker } from "./google-place-picker";
 import { ArrowLeft, BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
@@ -40,6 +41,7 @@ export function ProfileView({
   profile,
   priorities,
   details,
+  translationStatus,
   message,
   signIn,
   getAuthHeaders,
@@ -48,6 +50,7 @@ export function ProfileView({
   profile: { displayName: string; pictureUrl?: string } | null;
   priorities: Priorities | null;
   details: [string, string | null | undefined][];
+  translationStatus: string;
   message?: string;
   signIn?: () => void;
   getAuthHeaders: () => Record<string, string> | null;
@@ -84,6 +87,7 @@ export function ProfileView({
 
         <section aria-labelledby="housing-details" className="mt-5 rounded-3xl border border-stone-200 bg-white px-5 py-5 sm:px-6">
           <h2 id="housing-details" className="text-base font-semibold">{t("Profile Details")}</h2>
+          {translationStatus && <p role="status" className="mt-2 text-sm text-stone-600">{translationStatus}</p>}
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
             {[[t("LINE Display Name"), profile?.displayName && capitalizeWords(profile.displayName)], ...details].map(([label, value]) => (
               <div key={label} className="min-w-0">
@@ -121,6 +125,12 @@ function PriorityEditor({
 }) {
   const { language, t } = useLanguage();
   const [saved, setSaved] = useState(priorities);
+  const { localize, status: translationStatus } = useContentTranslation(
+    saved?.categories.flatMap(({ category, places }) => [
+      category.startsWith("custom:") ? formatPriorityCategory(category) : null,
+      ...places.filter((place) => !isGoogleMapsLink(place)).map((place) => formatPriorityLocation(place)),
+    ]) ?? [],
+  );
   const [rows, setRows] = useState(() => toRows(priorities?.categories ?? []));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selected, setSelected] = useState("");
@@ -308,14 +318,19 @@ function PriorityEditor({
               </button>
             )}
           </div>
+          {translationStatus && <p role="status" className="px-5 pt-3 text-sm text-stone-600 sm:px-6">{translationStatus}</p>}
           {rows.length === 0 && <p className="px-5 py-5 text-sm text-stone-600 sm:px-6">{t("No categories selected.")}</p>}
             <ul className="divide-y divide-stone-100 px-5 sm:px-6">
               {rows.map(({ category, locationText, value }, index) => {
-                const label = formatPriorityCategory(category, language);
+                const label = category.startsWith("custom:")
+                  ? localize(formatPriorityCategory(category))
+                  : formatPriorityCategory(category, language);
                 const Icon = categoryIcons[category] ?? MapPin;
                 const { places } = weights[index];
                 const defaultWeight = value ? undefined : resolvedWeights?.[index]?.weight;
-                const locationLabel = places.map((place) => formatPriorityLocation(place, language)).join(" · ");
+                const locationLabel = places.map((place) => isGoogleMapsLink(place)
+                  ? formatPriorityLocation(place, language)
+                  : localize(formatPriorityLocation(place))).join(" · ");
                 return (
                   <li key={category} className="grid grid-cols-[minmax(0,1fr)_4.75rem_2.75rem] items-center gap-2 sm:gap-3 py-4">
                     <div className="flex min-w-0 items-start gap-3">

@@ -29,7 +29,7 @@ export function RecommendationsHome() {
 
   return (
     <AnalysisLoader header={header}>
-      {(analysis) => analysis ? <AnalysisResults analysis={analysis} /> : (
+      {(analysis, localize) => analysis ? <AnalysisResults analysis={analysis} localize={localize} /> : (
         <div className="mt-5 rounded-2xl border border-[#dce3d9] bg-white p-5">
           <p className="font-semibold">{t("No recommendations yet")}</p>
           <p className="mt-1 text-sm leading-relaxed text-[#52645a]">{t("Start a search in the Yoo Nai Dee LINE chat. Your recommendations will appear here when the search is complete.")}</p>
@@ -39,7 +39,10 @@ export function RecommendationsHome() {
   );
 }
 
-function AnalysisResults({ analysis }: { analysis: SavedAnalysis }) {
+function AnalysisResults({ analysis, localize }: {
+  analysis: SavedAnalysis;
+  localize: (text: string) => string;
+}) {
   const { t, locale } = useLanguage();
   const { recommendations } = analysis.result;
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "Asia/Bangkok" })
@@ -47,7 +50,7 @@ function AnalysisResults({ analysis }: { analysis: SavedAnalysis }) {
 
   return (
     <div className="mt-5">
-      {analysis.destination && <span className="block font-semibold">{analysis.destination}</span>}
+      {analysis.destination && <span className="block font-semibold">{localize(analysis.destination)}</span>}
       <time className="text-sm text-[#52645a]" dateTime={analysis.createdAt}>{date}</time>
       {recommendations.length ? (
         <ol role="list" className="mt-4 space-y-4">
@@ -56,16 +59,16 @@ function AnalysisResults({ analysis }: { analysis: SavedAnalysis }) {
               <ZoneArtwork index={index} rank={zone.rank ?? index + 1} />
               <div className="min-w-0 p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                  <h2 className="font-serif text-2xl leading-tight [overflow-wrap:anywhere] sm:text-3xl">{zone.zoneName}</h2>
+                  <h2 className="font-serif text-2xl leading-tight [overflow-wrap:anywhere] sm:text-3xl">{localize(zone.zoneName)}</h2>
                   {zone.overallScore != null && (
                     <span className="rounded-full bg-[#eaf1e6] px-3 py-1 text-sm font-semibold text-[#164334]">{t("Score {score}", { score: zone.overallScore })}</span>
                   )}
                 </div>
-                {zone.reasoning && <p className="mt-2 leading-relaxed [overflow-wrap:anywhere]">{zone.reasoning}</p>}
+                {zone.reasoning && <p className="mt-2 leading-relaxed [overflow-wrap:anywhere]">{localize(zone.reasoning)}</p>}
                 <Link href={{
                   pathname: `/recommendations/${encodeURIComponent(zone.zoneId)}`,
                   query: { result: analysis.id },
-                }} aria-label={t("View zone analysis for {zone}", { zone: zone.zoneName })} className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-[#c8d9cb] px-3 text-sm font-semibold text-[#164334] hover:bg-[#eaf1e6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#164334]">
+                }} aria-label={t("View zone analysis for {zone}", { zone: localize(zone.zoneName) })} className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-[#c8d9cb] px-3 text-sm font-semibold text-[#164334] hover:bg-[#eaf1e6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#164334]">
                   {t("View zone analysis")}
                 </Link>
               </div>

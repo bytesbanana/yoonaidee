@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import ProfileLoading from "../profile/loading";
 import { ProfileView } from "../profile/profile-view";
 import { useLanguage } from "../providers/language-provider";
+import { useContentTranslation } from "../providers/use-content-translation";
 import { useLiff } from "../providers/LiffProvider";
-import { hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
+import { hasCompleteWeights, isGoogleMapsLink, type PreferenceCategory } from "@/lib/preferences/categories";
 import { formatHousingType, formatPriorityCategory, formatPriorityLocation, formatTransport } from "@/lib/preferences/display";
 import { normalizeLocation } from "@/lib/preferences/locations";
 import { lineAuthHeaders } from "@/lib/line/liff-auth";
@@ -84,12 +85,24 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
   const categories = settings?.categories ?? [];
   const total = categories.reduce((sum, { weight }) => sum + (weight ?? 0), 0);
   const complete = hasCompleteWeights(categories);
-  const preferredModes = settings?.preferredModes.map((mode) => formatTransport(mode, language)).filter(Boolean);
-  const transport = preferredModes?.join(", ") || (settings?.transport && formatTransport(settings.transport, language));
+  const preferredModes = settings?.preferredModes.map((mode) => formatTransport(mode)).filter(Boolean);
+  const primaryMode = settings?.transport && formatTransport(settings.transport);
+  const transportLabels = preferredModes?.length ? preferredModes : primaryMode ? [primaryMode] : [];
+  const housingLabels = settings?.housing.map((type) => formatHousingType(type)).filter(Boolean) ?? [];
+  const destination = settings?.destination && normalizeLocation(settings.destination);
+  const { localize, status } = useContentTranslation([
+    showProfile ? null : destination,
+    ...transportLabels,
+    ...housingLabels,
+    ...(showProfile ? [] : categories.flatMap(({ category, places }) => [
+      category.startsWith("custom:") ? formatPriorityCategory(category) : null,
+      ...places.filter((place) => !isGoogleMapsLink(place)).map((place) => formatPriorityLocation(place)),
+    ])),
+  ]);
   const housingDetails: [string, string | null | undefined][] = [
     [t("Monthly Rent Ceiling"), settings?.budget ? `฿${settings.budget.toLocaleString(locale)}` : null],
-    [t("Transport"), transport],
-    [t("Housing Types"), settings?.housing.map((type) => formatHousingType(type, language)).filter(Boolean).join(", ")],
+    [t("Transport"), transportLabels.map(localize).join(", ")],
+    [t("Housing Types"), housingLabels.map(localize).join(", ")],
   ];
   const signIn = () => liffObject?.login({ redirectUri: window.location.href });
   if (showProfile) {
@@ -104,6 +117,7 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
         profile={profile}
         priorities={settings}
         details={housingDetails}
+        translationStatus={status}
         message={message}
         signIn={view.status === "sign-in" ? signIn : undefined}
         getAuthHeaders={() => lineAuthHeaders(liffObject)}
@@ -113,7 +127,7 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
   }
 
   const settingsDetails: [string, string | null | undefined][] = [
-    [t("Destination"), settings?.destination && normalizeLocation(settings.destination)],
+    [t("Destination"), destination && localize(destination)],
     ...housingDetails,
   ];
   const details = settingsDetails.filter(([, value]) => value);
@@ -140,6 +154,7 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
         {view.status === "loaded" && categories.length === 0 && details.length === 0 && (
           <p className="mt-8 rounded-xl bg-white p-5">{t("No housing preferences saved yet. Tell us what you’re looking for in the Yoo Nai Dee LINE chat.")}</p>
         )}
+        {status && <p role="status" className="mt-4 text-sm text-stone-600">{status}</p>}
         {categories.length > 0 && (
           <section aria-labelledby="priorities" className="mt-8 rounded-2xl border border-stone-200 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 px-5 py-4">
@@ -152,8 +167,10 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
               {categories.map(({ category, places, weight }) => (
                 <li key={category} className="flex items-start justify-between gap-4 px-5 py-4">
                   <div>
-                    <p className="font-medium">{formatPriorityCategory(category, language)}</p>
-                    <p className="mt-1 text-sm text-stone-600">{places.length ? places.map((place) => formatPriorityLocation(place, language)).join(" · ") : t("Any Nearby")}</p>
+                    <p className="font-medium">{category.startsWith("custom:") ? localize(formatPriorityCategory(category)) : formatPriorityCategory(category, language)}</p>
+                    <p className="mt-1 text-sm text-stone-600">{places.length ? places.map((place) => isGoogleMapsLink(place)
+                      ? formatPriorityLocation(place, language)
+                      : localize(formatPriorityLocation(place))).join(" · ") : t("Any Nearby")}</p>
                   </div>
                   <span className="shrink-0 text-sm tabular-nums">{weight === null ? t("Pending") : `${weight}%`}</span>
                 </li>
