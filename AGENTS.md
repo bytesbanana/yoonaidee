@@ -30,7 +30,7 @@
 - **Dev A:** `src/components/**`, `src/app/results/**`, `src/lib/line/build-recommendation-flex.ts`
 - **Dev B:** `src/lib/agent/**`, `src/lib/scoring/**`
 - **Dev C:** `src/app/api/**`, `src/lib/db/**`, `src/lib/jobs/**` (enqueue side only), `src/lib/neighborhoods/**`
-- **Shared:** `src/types/recommendation.ts`, `src/lib/db/schema.ts`, mock JSON fixture, environment variable names — agree before editing.
+- **Shared:** `src/types/recommendation.ts`, `docs/yoo_nai_dee_init.sql`, mock JSON fixture, environment variable names — agree before editing.
 
 ## Running locally
 Not scaffolded yet. When the app starts: `cp .env.example .env`, run a Postgres, `npm run dev`. Docker Compose (`web` + `db`) is the planned local setup — add it when the scaffold lands, not before. The job worker lives in a **separate repo** and polls the same `jobs` table; this repo only enqueues. See `SCHEMA.md` for table definitions.

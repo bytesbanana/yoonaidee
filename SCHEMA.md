@@ -1,8 +1,8 @@
-# SCHEMA — Database Definition (PostgreSQL 16 + Drizzle)
+# SCHEMA — PostgreSQL Database Definition
 
-**Scope:** Lean MVP. Four tables, minimal indexes. Assumptions are allowed to change — if the shape is wrong, edit this file and `src/lib/db/schema.ts` together.
+**Current schema:** [SQL baseline](docs/yoo_nai_dee_init.sql) defines 10 tables. The hosted database also allows `WAITING_FOR_HANDLER` for analysis jobs and `ANALYSIS_ACKNOWLEDGED` for notifications.
 
-Drizzle source of truth: `src/lib/db/schema.ts` (added with the app scaffold). The worker repo `yoonaidee-background-worker` (submodule) must use the exact same table shape.
+**Historical design below:** The original four-table MVP proposal is retained for reference. It does not describe the current database.
 
 ---
 
@@ -141,7 +141,7 @@ CREATE TABLE results (
 CREATE INDEX results_line_user_id_idx ON results (line_user_id);
 ```
 
-Migrations: `drizzle-kit push` for hackathon speed, `drizzle-kit generate` + `migrate` when the schema stabilizes.
+For an existing database, inspect the PostgreSQL catalog with a read-only connection before proposing schema changes. The historical SQL above is not a migration.
 
 ---
 

@@ -39,7 +39,7 @@ Two logical AI stages, **not** two services or a complicated multi-agent framewo
 | Styling | Tailwind CSS; shadcn/ui only if useful |
 | AI | OpenAI API, tool calling, structured output |
 | Validation | Zod at external/system boundaries |
-| Persistence + queue | PostgreSQL 16, Drizzle ORM |
+| Persistence + queue | PostgreSQL, SQL via `pg` |
 | LINE | Messaging API Webhook, Push, Flex and optional LIFF |
 | Source data | Versioned `data/neighborhoods.json` snapshot |
 | Maps, rental provider | Optional stretch integrations, not blockers |
