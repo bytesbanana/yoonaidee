@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import type { SavedAnalysis, ZoneResult } from "@/lib/analyses/result";
 import { AnalysisLoader } from "../analysis-loader";
+import { ZoneArtwork } from "../zone-artwork";
 
 export function ZoneAnalysis() {
   const { zone } = useParams<{ zone: string }>();
@@ -25,15 +26,17 @@ export function ZoneAnalysis() {
 
       <AnalysisLoader<{ analysis: SavedAnalysis | null }> key={query} query={query}>
         {({ analysis }) => {
-          const match = analysis?.result.recommendations.find(({ zoneId }) => zoneId === zone);
-          return match ? <ZoneDetails zone={match} /> : <p className="mt-4">This zone is unavailable in the saved analysis.</p>;
+          const zones = analysis?.result.recommendations ?? [];
+          const index = zones.findIndex(({ zoneId }) => zoneId === zone);
+          const match = zones[index];
+          return match ? <ZoneDetails zone={match} index={index} /> : <p className="mt-4">This zone is unavailable in the saved analysis.</p>;
         }}
       </AnalysisLoader>
     </>
   );
 }
 
-function ZoneDetails({ zone }: { zone: ZoneResult }) {
+function ZoneDetails({ zone, index }: { zone: ZoneResult; index: number }) {
   const scores = Object.entries(zone.scores ?? {}).filter(([, score]) => score !== null);
   const commute = [
     zone.commute?.minutes != null ? `${zone.commute.minutes} min` : null,
@@ -43,9 +46,12 @@ function ZoneDetails({ zone }: { zone: ZoneResult }) {
 
   return (
     <>
-      <header className="mt-3 rounded-[2rem] bg-[#163a2f] p-6 text-[#faf8ed] sm:p-9">
-        <h1 className="font-serif text-4xl tracking-tight sm:text-5xl">{zone.zoneName}</h1>
-        {zone.overallScore != null && <p className="mt-3">Overall score {zone.overallScore}</p>}
+      <header className="mt-3 overflow-hidden rounded-[2rem] bg-[#163a2f] text-[#faf8ed]">
+        <div className="p-6 sm:px-9">
+          <h1 className="font-serif text-4xl tracking-tight [overflow-wrap:anywhere] sm:text-5xl">{zone.zoneName}</h1>
+          {zone.overallScore != null && <p className="mt-3">Overall score {zone.overallScore}</p>}
+        </div>
+        <ZoneArtwork index={index} rank={zone.rank ?? index + 1} detail />
       </header>
       <div className="mt-5 space-y-5">
         {zone.reasoning && <p className="leading-relaxed">{zone.reasoning}</p>}

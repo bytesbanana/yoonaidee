@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { AnalysisSummary, SavedAnalysis } from "@/lib/analyses/result";
 import { AnalysisLoader } from "./analysis-loader";
+import { ZoneArtwork } from "./zone-artwork";
 
 const recommendationsPath = "/recommendations";
 const historyHref = `${recommendationsPath}?view=history`;
@@ -80,25 +81,30 @@ function AnalysisResults({ analysis, history }: { analysis: SavedAnalysis; histo
     <div className="mt-3">
       <AnalysisLabel analysis={analysis} />
       {recommendations.length ? (
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-          {recommendations.map((zone) => (
-            <li key={zone.zoneId} className="rounded-2xl border border-[#dce3d9] bg-white p-5">
-              <h3 className="font-serif text-2xl">{zone.zoneName}</h3>
-              <p className="text-sm text-[#52645a]">
-                {[zone.rank != null && `Rank ${zone.rank}`, zone.overallScore != null && `Score ${zone.overallScore}`].filter(Boolean).join(" · ")}
-              </p>
-              {zone.reasoning && <p className="mt-3 text-sm">{zone.reasoning}</p>}
-              <Link href={{
-                pathname: `/recommendations/${encodeURIComponent(zone.zoneId)}`,
-                query: { result: analysis.id, ...(history ? { view: "history" } : {}) },
-              }} className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#164334] underline">
-                View zone analysis
-              </Link>
+        <ol role="list" className="mt-4 space-y-4">
+          {recommendations.map((zone, index) => (
+            <li key={zone.zoneId} role="listitem" className="overflow-hidden rounded-2xl border border-[#dce3d9] bg-white sm:grid sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+              <ZoneArtwork index={index} rank={zone.rank ?? index + 1} />
+              <div className="min-w-0 p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                  <h3 className="font-serif text-2xl leading-tight [overflow-wrap:anywhere] sm:text-3xl">{zone.zoneName}</h3>
+                  {zone.overallScore != null && (
+                    <span className="rounded-full bg-[#eaf1e6] px-3 py-1 text-sm font-semibold text-[#164334]">Score {zone.overallScore}</span>
+                  )}
+                </div>
+                {zone.reasoning && <p className="mt-2 leading-relaxed [overflow-wrap:anywhere]">{zone.reasoning}</p>}
+                <Link href={{
+                  pathname: `/recommendations/${encodeURIComponent(zone.zoneId)}`,
+                  query: { result: analysis.id, ...(history ? { view: "history" } : {}) },
+                }} aria-label={`View zone analysis for ${zone.zoneName}`} className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-[#c8d9cb] px-3 text-sm font-semibold text-[#164334] hover:bg-[#eaf1e6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#164334]">
+                  View zone analysis
+                </Link>
+              </div>
             </li>
           ))}
-        </ul>
+        </ol>
       ) : <p className="mt-3 text-sm text-[#52645a]">This analysis has no recommended zones.</p>}
-      {dataLimitations.length > 0 && (
+      {history && dataLimitations.length > 0 && (
         <div className="mt-4 text-sm text-[#52645a]">
           <h3 className="font-semibold">Data limitations</h3>
           <ul className="mt-1 list-disc pl-5">{dataLimitations.map((item, index) => <li key={index}>{item}</li>)}</ul>

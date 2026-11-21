@@ -29,11 +29,12 @@ Spacing scale: Tailwind default (`p-4`, `p-6`, `gap-2`, `gap-4`). Type scale: `t
 
 ### Homepage
 
-- Title the home page **Choose your next stay** and provide two actions, **Living zone recommendation** and **Your profile**.
+- Title the home page **Choose your next stay**. Keep **Living zone recommendation** and **Your profile** in the hero before the image on mobile so both actions are immediately visible.
 
 ### Living zone recommendations
 
 - Show the latest saved recommendation on the **Current** tab and earlier recommendations on the **Past searches** tab.
+- Show the saved rank, score when available, and reasoning on each zone card. Label the Bangkok artwork as illustrative. Show the saved data-limitations section in Past searches.
 - Put estimated base rent, lease and availability status, and commute actions above the photos on mobile. State the estimate basis and distinguish sample data on both the shortlist and listing pages.
 - Keep past searches on the same browser. Label each search by destination and budget, with dates for older searches that have them. Preserve the search when returning from a listing.
 
