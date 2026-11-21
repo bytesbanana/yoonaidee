@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { GooglePlacePicker } from "./google-place-picker";
 import { BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
@@ -84,6 +85,10 @@ export function ProfileView({
             ))}
           </dl>
         </section>
+
+        <Link href="/recommendations?view=update" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800">
+          Update recommendation
+        </Link>
       </div>
     </main>
   );

@@ -5,8 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import { StayPlanner } from "./stay-planner";
 
 export const metadata: Metadata = {
-  title: "Plan a short stay | Yoo Nai Dee",
-  description: "Compare sample rent for your dates and check routes to your next assignment in Bangkok.",
+  title: "Living zone recommendation | Yoo Nai Dee",
+  description: "View your current living zone recommendation and revisit saved searches.",
 };
 
 export default function RecommendationsPage() {
@@ -16,7 +16,7 @@ export default function RecommendationsPage() {
         <ArrowLeft aria-hidden="true" className="size-4" />
         Home
       </Link>
-      <Suspense fallback={<p className="mt-8" role="status">Loading stay planner…</p>}>
+      <Suspense fallback={<p className="mt-8" role="status">Loading recommendations…</p>}>
         <StayPlanner />
       </Suspense>
     </>

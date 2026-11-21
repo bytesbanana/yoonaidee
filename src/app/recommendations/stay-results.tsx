@@ -60,8 +60,8 @@ export function StayResults({ search, onEdit, onNew }: {
           <p>{formatBaht(search.budget)} total rent budget</p>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={onEdit} className={secondaryAction}>Edit stay</button>
-          <button type="button" onClick={onNew} className={secondaryAction}>Plan another stay</button>
+          <button type="button" onClick={onEdit} className={secondaryAction}>Update recommendation</button>
+          <button type="button" onClick={onNew} className={secondaryAction}>Search for another stay</button>
         </div>
       </section>
 

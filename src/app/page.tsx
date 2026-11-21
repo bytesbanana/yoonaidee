@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Clock3, UserRound } from "lucide-react";
+import { ArrowUpRight, MapPin, UserRound } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Yoo Nai Dee | Short stays in Bangkok",
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 const destinations = [
-  { href: "/recommendations?view=history", title: "Past searches", description: "Reopen a stay you planned on this device.", icon: Clock3 },
+  { href: "/recommendations", title: "Living zone recommendation", description: "View your current recommendation and past searches.", icon: MapPin },
   { href: "/profile", title: "Your profile", description: "Manage your saved LINE preferences.", icon: UserRound },
 ];
 
@@ -20,14 +20,11 @@ export default function Home() {
         <section className="grid overflow-hidden rounded-[2rem] bg-[#163a2f] text-[#faf8ed] md:grid-cols-[1fr_1fr]">
           <div className="flex flex-col items-start justify-center px-6 py-9 sm:px-10 md:py-12 lg:px-14 lg:py-16">
             <h1 className="max-w-lg font-serif text-[clamp(2.65rem,5vw,4.4rem)] leading-[1.02] tracking-[-0.05em]">
-              Find a short stay <em className="font-normal text-[#d9edaa]">near your next job.</em>
+              Choose your <em className="font-normal text-[#d9edaa]">next stay</em>
             </h1>
             <p className="mt-4 max-w-sm leading-relaxed text-[#e0e9dd]">
               Moving across Bangkok for work? Compare areas around your assignment, travel dates, and total rent budget.
             </p>
-            <Link href="/recommendations" className="mt-6 inline-flex min-h-12 items-center gap-3 rounded-xl bg-[#d9edaa] px-5 text-sm font-semibold text-[#163a2f] hover:bg-[#e9f7cd] focus-visible:outline-offset-4">
-              Plan a stay <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
           </div>
           <div className="relative min-h-40 sm:min-h-52 md:min-h-[25rem]">
             <Image src="/bangkok-hero.webp" alt="" fill preload sizes="(min-width: 1280px) 576px, (min-width: 768px) 50vw, 100vw" className="object-cover object-[60%_50%]" />

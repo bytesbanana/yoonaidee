@@ -29,18 +29,18 @@ Spacing scale: Tailwind default (`p-4`, `p-6`, `gap-2`, `gap-4`). Type scale: `t
 
 ### Homepage
 
-- Put the short-stay promise and **Plan a stay** action before the Bangkok hero image on phones.
-- Provide secondary access to **Past searches** and **Your profile**.
+- Title the home page **Choose your next stay** and provide two actions, **Living zone recommendation** and **Your profile**.
 
-### Stay planner
+### Living zone recommendations
 
-- Ask for the work location, stay dates, and total rent budget. Offer to reuse existing LINE preferences when the user has signed in.
+- Show the latest saved recommendation above Past searches. Offer sample areas when the browser has no saved search.
+- When updating a recommendation, ask for the work location, stay dates, and total rent budget. Offer to reuse existing LINE preferences when the user has signed in.
 - Put estimated base rent, lease and availability status, and commute actions above the photos on mobile. State the estimate basis and distinguish sample data on both the shortlist and listing pages.
 - Keep past searches on the same browser. Label each search by work location and stay dates, and preserve the search when returning from a listing.
 
 ### Profile page
 
-- Put the profile title and small LINE avatar at the top, with housing details below the priorities editor.
+- Put the profile title and small LINE avatar at the top, with housing details below the priorities editor. Link to the recommendation form with **Update recommendation**.
 - Give lifestyle priorities the most prominent card. Show the total out of 100% in the header, then one row per saved category with its name, places, a proportional bar and a numeric percentage field.
 - Use emerald for allocation and the primary action. Keep the inputs large enough for mobile touch and require whole percentages and cap the combined allocation at 100%.
 - Keep the priority card visible when no categories are available. Put the category picker below the allocation bar and provide a remove action on each row.

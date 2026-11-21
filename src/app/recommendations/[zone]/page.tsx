@@ -62,7 +62,7 @@ async function ZoneStays({ zone, searchParams }: {
     <>
       <Link href={backHref} className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[#164334] hover:underline focus-visible:outline-offset-4">
         <ArrowLeft aria-hidden="true" className="size-4" />
-        {stay ? "Back to your shortlist" : "Back to the stay planner"}
+        {stay ? "Back to your shortlist" : "Back to recommendations"}
       </Link>
 
       <header className="mt-3 rounded-[2rem] bg-[#163a2f] p-6 text-[#faf8ed] sm:p-9">

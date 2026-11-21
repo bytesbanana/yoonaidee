@@ -82,7 +82,7 @@ export function StayForm({ initial, onSearch, onCancel }: {
   return (
     <form onSubmit={submit} className="mt-5 rounded-3xl border border-[#dce3d9] bg-white p-5 sm:p-7" aria-labelledby="stay-form-heading">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-        <h2 id="stay-form-heading" className="font-serif text-2xl tracking-tight">{onCancel ? "Edit your stay" : "Your stay details"}</h2>
+        <h2 id="stay-form-heading" className="font-serif text-2xl tracking-tight">{initial?.moveIn ? "Edit your stay" : "Your stay details"}</h2>
         <button type="button" onClick={useExample} className="min-h-11 text-sm font-semibold text-[#164334] underline underline-offset-4">
           Fill in an example
         </button>
