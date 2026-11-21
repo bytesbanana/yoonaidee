@@ -25,7 +25,7 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 | Priority | Feature | Done when… |
 | --- | --- | --- |
 | P0 | LINE entry | Webhook verifies LINE signature, deduplicates events, replies to intake; queues analysis only when ready |
-| P0 | Conversation AI | Extracts workplace, budget, travel mode and lifestyle from natural language |
+| P0 | Conversation AI | Saves all clear preferences from each message, even when it answers more than the last question; keeps saved preferences unless the user changes or removes them |
 | P0 | Clarification | Asks one concise question when a critical detail is missing or ambiguous |
 | P0 | Neighborhood discovery | Agent calls `searchNeighborhoods` and `getNeighborhoodDetails` against prepared Bangkok JSON |
 | P0 | Explainable top 3 | Output has validated IDs, scores, reason(s), one trade-off per neighborhood |
@@ -116,7 +116,7 @@ Parallel work begins immediately after agreeing on shared schema, fixture and en
 ## 10. Demo success checklist
 
 - One live LINE conversation progresses from a request to three relevant recommendations.
-- Clarification works when transport mode is omitted.
+- When asked for a workplace, reply with workplace, rent ceiling, and gym preference together. All three are saved, and the next question asks only for transport. After answering with a transport mode, the bot asks for search confirmation without dropping the earlier preferences.
 - Top 3 Flex cards display consistent scores, reasons and trade-offs.
 - A data-dependent fact can be traced to the snapshot or tool response.
 - Mock fallback works if an outside API is rate-limited.
