@@ -46,7 +46,7 @@ Use these predefined lifestyle categories where they fit (key, English label / T
 Return one row per selected category. A named branch, station, workplace or other location goes in places. An empty places list means any nearby option is fine. Preserve Google Maps links exactly as provided. Preserve previously selected categories and their weights unless the user changes or removes them. Migrate any legacy lifestyle entries mentioned in the saved profile into matching categories when no weighted catalog exists.
 Use the closest predefined category when it matches. Preserve existing custom categories exactly unless the user changes or removes them. For an explicitly requested category without a match, use custom: followed by the user’s category name, up to 60 characters.
 Set weight to a whole percent only when the user supplied it or it was already saved. Leave unspecified weights null. Lifestyle categories and weights are optional. If a required field is genuinely unresolved, return null for that field so the application can ask for it.
-Maintain the existing lifestyle importance fields from the user's stated priorities; leave unmentioned interests null. Capture explicit deal-breakers under otherRequirements as needed.
+Maintain the existing lifestyle importance fields from the user's stated priorities; leave unmentioned interests null. When the prior question also invited a nearby lifestyle priority, capture what the user wants near home (including activities they name in response). A transport-only answer is valid; never copy examples from the question or infer a lifestyle priority from transport. Capture explicit deal-breakers under otherRequirements as needed.
 If the latest message is unrelated to housing, preserve the saved profile and do not infer new preferences. For a new session, use nulls, empty arrays, and false for unknown fields where applicable. Default language is Thai. Never suggest zones or listings, claim facts, or ask for contact details.`;
 
 function toProfile(
@@ -84,12 +84,14 @@ const questions = {
     destination: "ปกติเดินทางไปทำงานหรือไปที่ไหนบ่อยที่สุดครับ? ถ้าไม่มี บอกย่านหรือเมืองที่อยากเริ่มหาได้เลย",
     budget: "งบค่าเช่าสูงสุดต่อเดือนประมาณกี่บาทครับ?",
     transport: "ปกติเดินทางด้วยอะไรเป็นหลักครับ เช่น BTS/MRT รถยนต์ มอเตอร์ไซค์ หรือเดิน?",
+    lifestyleInvite: "ถ้ามีอะไรที่อยากให้อยู่ใกล้บ้านเป็นพิเศษ เช่น สวนไว้ไปวิ่ง ยิมที่ไปประจำ หรือตลาด ก็บอกได้เลยครับ",
     ready: "บันทึกความต้องการที่พักของคุณแล้วครับ",
   },
   en: {
     destination: "Where do you work or travel to most often? If you have no regular commute, which city or area should we search?",
     budget: "What's your maximum monthly rent in Thai baht?",
     transport: "How do you usually get around, for example BTS/MRT, car, motorcycle, or walking?",
+    lifestyleInvite: "If there’s anything you’d like close to home, like a park for running, your regular gym, or a market, feel free to mention it too.",
     ready: "I’ve saved your housing preferences.",
   },
 };
@@ -124,9 +126,14 @@ export function evaluateConversation(output: unknown, previousProfile?: unknown)
     categories: profile.categories.map((item) => ({ ...item, places: normalizeCategoryLocations(item.places) })),
   };
   const copy = questions[language];
-  const question = !fields.destination ? copy.destination
-    : !fields.maxMonthlyRent ? copy.budget
-    : !fields.primaryTransport ? copy.transport : null;
+  let question: string | null = null;
+  if (!fields.destination) question = copy.destination;
+  else if (!fields.maxMonthlyRent) question = copy.budget;
+  else if (!fields.primaryTransport) {
+    const hasLifestyle = fields.categories.some(({ category }) => !["work", "school", "transit", "expressway"].includes(category))
+      || Object.values(fields.lifestyle).some((value) => value !== null);
+    question = hasLifestyle ? copy.transport : `${copy.transport}\n${copy.lifestyleInvite}`;
+  }
   return { profile: toProfile(fields, language, withAnchor(fields, previousProfile)), ready: question === null, question, reply: question ?? copy.ready };
 }
 

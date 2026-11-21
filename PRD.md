@@ -44,7 +44,7 @@ The web demo at `/recommendations` shows five sample Bangkok zones in a fixed or
 
 1. User sends a free-form LINE message.
 2. Webhook loads PostgreSQL memory by verified LINE user ID. It silently acknowledges messages while that user has an active analysis.
-3. Webhook uses Codex to update preferences. Missing destination, budget, or transport gets a text question with no job. A newly complete or changed profile queues one `ANALYSIS` job with the profile snapshot and gets a Flex confirmation.
+3. Webhook uses Codex to update preferences. Missing destination, budget, or transport gets a text question with no job. If no lifestyle preference is known, the transport question also invites the user to mention what they want near home. Answering only the transport question is enough; no extra turn or weights required. A newly complete or changed profile queues one `ANALYSIS` job with the profile snapshot and gets a Flex confirmation.
 4. Research agent calls neighborhood tools, compares options, and returns structured recommendations.
 5. A deterministic function computes/verifies numerical scores when feature values exist; AI explains trade-offs without fabricating numbers.
 6. LINE sends a Flex summary with an optional LIFF results link.

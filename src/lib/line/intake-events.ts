@@ -14,6 +14,22 @@ export const textEvent = z.object({
 
 type IntakeOutcome = { reply?: IntakeLineMessage; jobId?: string };
 
+async function showLoading(chatId: string, eventId: string) {
+  const channelToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelToken) return;
+  try {
+    const response = await fetch("https://api.line.me/v2/bot/chat/loading/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelToken}` },
+      body: JSON.stringify({ chatId, loadingSeconds: 10 }),
+      signal: AbortSignal.timeout(1000),
+    });
+    if (!response.ok) console.warn("line.loading.failed", { eventId, httpStatus: response.status });
+  } catch {
+    console.warn("line.loading.failed", { eventId });
+  }
+}
+
 function intakeErrorCode(error: unknown, stage: string) {
   if (!(error instanceof Error)) return "UNKNOWN";
   if (error.name === "AbortError" || error.name === "TimeoutError") return "TIMEOUT";
@@ -116,11 +132,14 @@ export async function handleTextEvent(event: z.infer<typeof textEvent>): Promise
 
     // Any Codex failure rolls back the event as well as the profile, allowing LINE redelivery.
     mark("codex.process");
-    const result = await processConversation({
-      message: event.message.text,
-      previousProfile: session.preferences,
-      previousQuestion: session.awaiting_question,
-    });
+    const [, result] = await Promise.all([
+      showLoading(event.source.userId, eventId),
+      processConversation({
+        message: event.message.text,
+        previousProfile: session.preferences,
+        previousQuestion: session.awaiting_question,
+      }),
+    ]);
     mark("db.save_profile");
     const { rows: [updated] } = await client.query<{ profile_version: number; should_queue: boolean }>(
       `WITH prior AS (
