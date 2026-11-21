@@ -54,7 +54,7 @@ export function buildAnalysisQueuedFlex() {
         contents: [
           { type: "text", text: "กำลังค้นหาที่อยู่ที่ใช่ 🏡", weight: "bold", size: "lg", wrap: true },
           { type: "text", text: "AI กำลังวิเคราะห์ค่าเช่า การเดินทาง และไลฟ์สไตล์ที่เหมาะกับคุณ", size: "sm", color: "#6B7280", wrap: true },
-          { type: "text", text: "กำลังวิเคราะห์ข้อมูล...", size: "sm", color: "#2563EB", wrap: true },
+          { type: "text", text: "กำลังรวบรวมข้อมูล...", size: "sm", color: "#2563EB", wrap: true },
         ],
       },
       footer: {

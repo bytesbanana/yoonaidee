@@ -34,19 +34,32 @@ export async function POST(request: Request) {
     if (outcome.jobId) console.info("line.analysis.queued", { eventId, jobId: outcome.jobId });
     if (!outcome.reply) continue;
 
+    // Push the queued-job card after commit without relying on the webhook reply token.
+    const isPush = outcome.jobId !== undefined;
+    const delivery = isPush ? "push" : "reply";
+    const logContext = { eventId, jobId: outcome.jobId };
     // LINE failure must not roll back saved intake or analysis jobs.
     try {
       const channelToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
       if (!channelToken) throw new Error("LINE channel token missing");
-      const response = await fetch("https://api.line.me/v2/bot/message/reply", {
+      const response = await fetch(`https://api.line.me/v2/bot/message/${delivery}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${channelToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ replyToken, messages: [outcome.reply] }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelToken}` },
+        body: JSON.stringify({
+          ...(isPush ? { to: parsed.data.source.userId } : { replyToken }),
+          messages: [outcome.reply],
+        }),
         signal: AbortSignal.timeout(3000),
       });
-      if (!response.ok) console.error("line.reply.failed", { eventId, httpStatus: response.status });
-    } catch {
-      console.error("line.reply.failed", { eventId });
+      if (!response.ok) {
+        console.error(`line.${delivery}.failed`, {
+          ...logContext, httpStatus: response.status, requestId: response.headers.get("x-line-request-id"),
+        });
+      } else if (isPush) {
+        console.info("line.push.accepted", logContext);
+      }
+    } catch (error) {
+      console.error(`line.${delivery}.failed`, { ...logContext, error: error instanceof Error ? error.message : "Unknown error" });
     }
   }
 
