@@ -1,42 +1,28 @@
 "use client";
 
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { findPastResult } from "./demo-results";
-import { parseSearches, readSearches, subscribeSearches, writeSearches } from "./saved-searches";
-import { StayResults } from "./stay-results";
-import { formatBaht, formatStayDate } from "./stay-search";
+import type { AnalysisSummary, SavedAnalysis } from "@/lib/analyses/result";
+import { AnalysisLoader } from "./analysis-loader";
 
 const recommendationsPath = "/recommendations";
 const historyHref = `${recommendationsPath}?view=history`;
-const searchHref = (id: string) => `${historyHref}&search=${id}`;
+const dateFormat = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Asia/Bangkok" });
+
+function AnalysisLabel({ analysis }: { analysis: AnalysisSummary }) {
+  return (
+    <>
+      {analysis.destination && <span className="block font-semibold">{analysis.destination}</span>}
+      <time className="text-sm text-[#52645a]" dateTime={analysis.createdAt}>{dateFormat.format(new Date(analysis.createdAt))}</time>
+    </>
+  );
+}
 
 export function RecommendationViews() {
   const params = useSearchParams();
-  const searchId = params.get("search");
-  const previousDemo = findPastResult(params.get("version") ?? undefined);
-  const storage = useSyncExternalStore(subscribeSearches, readSearches, () => null);
-  const searches = useMemo(() => parseSearches(storage ?? ""), [storage]);
-  const [storageError, setStorageError] = useState("");
-  const heading = useRef<HTMLHeadingElement>(null);
-  const [current, ...pastSearches] = searches;
-  const history = params.get("view") === "history" || Boolean(previousDemo || (searchId && searchId !== current?.id));
-  const selected = pastSearches.find(({ id }) => id === searchId);
-
-  function removePastSearch(id: string) {
-    const [latest, ...past] = parseSearches(readSearches());
-    const written = writeSearches(latest ? [latest, ...past.filter((item) => item.id !== id)] : []);
-    setStorageError(written ? "" : "This browser couldn’t remove the search.");
-  }
-
-  function clearPastSearches() {
-    if (!window.confirm("Clear all past searches saved in this browser?")) return;
-    const [latest] = parseSearches(readSearches());
-    const written = writeSearches(latest ? [latest] : []);
-    setStorageError(written ? "" : "This browser couldn’t clear past searches.");
-    if (written) heading.current?.focus();
-  }
+  const resultId = params.get("result");
+  const history = params.get("view") === "history";
+  const query = new URLSearchParams(resultId !== null ? { result: resultId } : history ? { view: "history" } : {}).toString();
 
   return (
     <>
@@ -56,67 +42,68 @@ export function RecommendationViews() {
         ))}
       </nav>
 
-      {storageError && <p role="alert" className="mt-4 text-sm font-medium text-amber-900">{storageError}</p>}
-      {storage === null ? (
-        <p className="mt-5 text-sm text-[#52645a]" role="status">Loading saved searches…</p>
-      ) : history ? (
-        <section className="mt-5" aria-labelledby="past-searches-heading">
-          <div className="flex flex-wrap items-center justify-between gap-x-4">
-            <h2 ref={heading} tabIndex={-1} id="past-searches-heading" className="font-serif text-3xl tracking-tight">
-              {selected || previousDemo ? "Past recommendation" : "Past searches"}
-            </h2>
-            {selected || previousDemo ? (
-              <Link href={historyHref} className="inline-flex min-h-11 items-center text-sm font-semibold text-[#164334] underline underline-offset-4">Back to past searches</Link>
-            ) : pastSearches.length > 0 && (
-              <button type="button" onClick={clearPastSearches} className="min-h-11 text-sm font-semibold text-[#164334] underline underline-offset-4">Clear past searches</button>
-            )}
-          </div>
-          {selected ? (
-            <StayResults search={selected} />
-          ) : previousDemo ? (
-            <div className="mt-4 rounded-3xl border border-[#dce3d9] bg-white p-5">
-              <p className="text-sm text-[#52645a]">Sample areas from {formatStayDate(previousDemo.date)} · {previousDemo.focus}</p>
-              <ul className="mt-2 flex flex-wrap gap-x-5">
-                {previousDemo.zones.map((zone) => (
-                  <li key={zone.slug}>
-                    <Link href={{ pathname: `/recommendations/${zone.slug}`, query: { version: previousDemo.version } }}
-                      className="inline-flex min-h-11 items-center text-sm text-[#164334] underline underline-offset-4">{zone.name}</Link>
+      <section className="mt-5" aria-labelledby="recommendation-heading">
+        <h2 id="recommendation-heading" className="font-serif text-3xl tracking-tight">
+          {history ? (resultId === null ? "Past searches" : "Past recommendation") : "Current recommendation"}
+        </h2>
+        {history && resultId !== null && <Link href={historyHref} className="mt-2 inline-block text-sm underline">Back to past searches</Link>}
+        {history && resultId === null ? (
+          <AnalysisLoader<{ history: AnalysisSummary[] }> key={query} query={query}>
+            {({ history }) => history.length ? (
+              <ul className="mt-3 space-y-3">
+                {history.map((item) => (
+                  <li key={item.id}>
+                    <Link href={{ pathname: recommendationsPath, query: { view: "history", result: item.id } }}
+                      className="block rounded-2xl border border-[#dce3d9] bg-white p-4 hover:underline">
+                      <AnalysisLabel analysis={item} />
+                    </Link>
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : (
-            <>
-              {searchId && <p className="mt-3 text-sm text-[#52645a]">This past search is unavailable in this browser.</p>}
-              {pastSearches.length === 0 ? (
-                <p className="mt-3 text-sm text-[#52645a]">Earlier recommendations saved in this browser will appear here.</p>
-              ) : (
-                <ul className="mt-3 space-y-3">
-                  {pastSearches.map((item) => (
-                    <li key={item.id} className="flex flex-wrap items-center justify-between gap-x-4 rounded-2xl border border-[#dce3d9] bg-white p-4">
-                      <Link href={searchHref(item.id)} className="min-w-0 flex-1 py-1 hover:underline">
-                        <p className="break-words font-semibold">{item.destination}</p>
-                        <p className="mt-1 text-sm text-[#52645a]">
-                          {"moveIn" in item ? `${formatStayDate(item.moveIn)} – ${formatStayDate(item.moveOut)} · ${formatBaht(item.budget)}` : `${formatBaht(item.budget)} monthly rent ceiling`}
-                        </p>
-                      </Link>
-                      <button type="button" onClick={() => removePastSearch(item.id)} aria-label={`Remove search for ${item.destination}`}
-                        className="min-h-11 px-1 text-sm text-[#52645a] underline underline-offset-4">Remove</button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </section>
-      ) : (
-        <section className="mt-5" aria-labelledby="recommendation-heading">
-          <h2 id="recommendation-heading" className="font-serif text-3xl tracking-tight">Current recommendation</h2>
-          {current ? <StayResults search={current} /> : (
-            <p className="mt-3 text-sm text-[#52645a]">You have no saved recommendation yet. Use Update recommendation in Your profile.</p>
-          )}
-        </section>
-      )}
+            ) : <p className="mt-3 text-sm text-[#52645a]">Earlier completed analyses will appear here.</p>}
+          </AnalysisLoader>
+        ) : (
+          <AnalysisLoader<{ analysis: SavedAnalysis | null }> key={query} query={query}>
+            {({ analysis }) => analysis ? <AnalysisResults analysis={analysis} history={history} /> : (
+              <p className="mt-3 text-sm text-[#52645a]">You have no completed analysis yet. Request one in the Yoo Nai Dee LINE chat.</p>
+            )}
+          </AnalysisLoader>
+        )}
+      </section>
     </>
+  );
+}
+
+function AnalysisResults({ analysis, history }: { analysis: SavedAnalysis; history: boolean }) {
+  const { recommendations, dataLimitations } = analysis.result;
+  return (
+    <div className="mt-3">
+      <AnalysisLabel analysis={analysis} />
+      {recommendations.length ? (
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+          {recommendations.map((zone) => (
+            <li key={zone.zoneId} className="rounded-2xl border border-[#dce3d9] bg-white p-5">
+              <h3 className="font-serif text-2xl">{zone.zoneName}</h3>
+              <p className="text-sm text-[#52645a]">
+                {[zone.rank != null && `Rank ${zone.rank}`, zone.overallScore != null && `Score ${zone.overallScore}`].filter(Boolean).join(" · ")}
+              </p>
+              {zone.reasoning && <p className="mt-3 text-sm">{zone.reasoning}</p>}
+              <Link href={{
+                pathname: `/recommendations/${encodeURIComponent(zone.zoneId)}`,
+                query: { result: analysis.id, ...(history ? { view: "history" } : {}) },
+              }} className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#164334] underline">
+                View zone analysis
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="mt-3 text-sm text-[#52645a]">This analysis has no recommended zones.</p>}
+      {dataLimitations.length > 0 && (
+        <div className="mt-4 text-sm text-[#52645a]">
+          <h3 className="font-semibold">Data limitations</h3>
+          <ul className="mt-1 list-disc pl-5">{dataLimitations.map((item, index) => <li key={index}>{item}</li>)}</ul>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,11 +1,9 @@
+import { authenticateLine } from "@/lib/line/verify-liff";
 import { intakePool, intakeTransaction } from "@/lib/db/intake-db";
 import { z } from "zod";
 import { categoryId, categoryKey, maxPreferenceCategories, preferenceCategories, preferencePlaces } from "@/lib/preferences/categories";
 import { normalizeCategoryLocations } from "@/lib/preferences/locations";
 
-const verifiedToken = z.object({ sub: z.string().min(1), name: z.string().min(1).optional() });
-const verifiedAccessToken = z.object({ client_id: z.string(), expires_in: z.number() });
-const lineProfile = z.object({ userId: z.string().min(1), displayName: z.string().min(1).optional() });
 const storedProfile = z.object({
   categories: preferenceCategories.optional(),
   budget: z.object({ maxMonthlyRent: z.number().positive().nullable() }).optional(),
@@ -33,55 +31,6 @@ type Session = {
 const headers = { "Cache-Control": "private, no-store" };
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
 
-async function authenticate(request: Request) {
-  // The LIFF ID is deployment configuration. Never choose the expected channel from a request token.
-  const liffChannelId = process.env.NEXT_PUBLIC_LIFF_ID?.trim().match(/^(\d+)-[a-zA-Z0-9]+$/)?.[1];
-  const channelId = process.env.LINE_LOGIN_CHANNEL_ID?.trim() || liffChannelId;
-  const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim());
-  if (!channelId || !databaseConfigured) {
-    console.error("line.settings.missing_config", {
-      lineChannelConfigured: Boolean(channelId),
-      databaseConfigured,
-    });
-    return json({ error: "Profile settings are unavailable. Try again shortly." }, 503);
-  }
-
-  const token = request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
-  if (!token || token.length > 8192) {
-    return json({ error: "Sign in with LINE to access your settings." }, 401);
-  }
-
-  const verifyUrl = "https://api.line.me/oauth2/v2.1/verify";
-  const options = { signal: AbortSignal.timeout(5000), cache: "no-store" as const };
-  const unauthorized = () => json({ error: "Sign in with LINE again to access your preferences." }, 401);
-  if (request.headers.get("x-line-token-type") === "access") {
-    const query = new URLSearchParams({ access_token: token });
-    const verification = await fetch(`${verifyUrl}?${query}`, options);
-    if (verification.status === 400 || verification.status === 401) return unauthorized();
-    if (!verification.ok) throw new Error("LINE verification unavailable");
-    const { client_id, expires_in } = verifiedAccessToken.parse(await verification.json());
-    if (client_id !== channelId || expires_in <= 0) return unauthorized();
-
-    const profile = await fetch("https://api.line.me/v2/profile", {
-      ...options,
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (profile.status === 401 || profile.status === 403) return unauthorized();
-    if (!profile.ok) throw new Error("LINE profile unavailable");
-    return lineProfile.parse(await profile.json());
-  }
-
-  const verification = await fetch(verifyUrl, {
-    ...options,
-    method: "POST",
-    body: new URLSearchParams({ id_token: token, client_id: channelId }),
-  });
-  if (verification.status === 400 || verification.status === 401) return unauthorized();
-  if (!verification.ok) throw new Error("LINE verification unavailable");
-  const { sub, name } = verifiedToken.parse(await verification.json());
-  return { userId: sub, displayName: name };
-}
-
 async function readSession(lineUserId: string) {
   const { rows: [session] } = await intakePool.query<Session>(
     `SELECT s.id, s.profile_version, s.preferences
@@ -94,7 +43,7 @@ async function readSession(lineUserId: string) {
 
 export async function GET(request: Request) {
   try {
-    const user = await authenticate(request);
+    const user = await authenticateLine(request, "Profile settings are unavailable. Try again shortly.");
     if (user instanceof Response) return user;
     const session = await readSession(user.userId);
     if (!session) return json({ settings: null });
@@ -128,7 +77,7 @@ function savedPriorities(session: Session) {
 
 export async function PATCH(request: Request) {
   try {
-    const user = await authenticate(request);
+    const user = await authenticateLine(request, "Profile settings are unavailable. Try again shortly.");
     if (user instanceof Response) return user;
     const update = weightUpdate.safeParse(await request.json().catch(() => null));
     if (!update.success) return json({ error: "Check the locations and percentages for each category." }, 400);

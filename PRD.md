@@ -38,7 +38,7 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 
 **Not in MVP:** Nationwide coverage, multi-agent debate, real-time BTS timing without a valid source, complex auth, sophisticated analytics, Redis/Kafka/S3, production-scale infrastructure.
 
-The home page offers **Living zone recommendation** and **Your profile**. The recommendations page has **Current** and **Past searches** tabs. **Update recommendation** on the profile uses the saved LINE destination and monthly rent ceiling to generate a shortlist based on fictional monthly base rents. Older searches retain their dates and prorated estimates. Results link to area-level directions and label lease terms, availability, and move-in costs as unconfirmed or unknown. The browser stores up to 20 searches. Removing or clearing history preserves the current recommendation. This preview uses sample listings while the separate analysis worker implements personalized results.
+The home page offers **Living zone recommendation** and **Your profile**. After LINE sign-in, **Current** shows the latest completed analysis from PostgreSQL and **Past searches** opens earlier completed analyses. Zone details use the saved analysis snapshot. Use the Yoo Nai Dee LINE chat to request an analysis. **View recommendations** on the profile opens the saved results.
 
 ## 5. User journey
 
