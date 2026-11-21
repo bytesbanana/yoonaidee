@@ -21,6 +21,7 @@
 - **Source of truth:** PRD defines features and shared contracts; Architecture defines system boundaries; Coding Standard defines style. They are guides, not law — when they conflict with reality or with shipping, pick the simpler option, implement it, and update the doc.
 - **Before editing:** State target feature, files you will touch and assumptions — briefly, one or two lines. Preserve existing public types unless the change requires breaking them.
 - **Commit messages:** Use Conventional Commits with a scope and an imperative summary, such as `feat(profile): add editable lifestyle priorities`.
+- **Push changes:** After implementing and verifying a change, commit it and push to the branch's configured upstream.
 - **While editing:** Make small changes, keep shared schemas intact, do not invent neighborhood facts, rent, transit times or scores. Validate all model output.
 - **After editing:** Summarize files changed, commands run, manual checks done, assumptions, and blockers. Do not claim checks that were not performed.
 - **Priority order:** Working end-to-end flow > demo reliability > explainable agent behavior > UI polish > stretch features.
