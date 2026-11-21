@@ -14,6 +14,7 @@
 2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** — How the Next.js/Node.js/LINE/OpenAI/PostgreSQL pieces connect, job flow, tool boundaries, deployment plan.
 3. **[SCHEMA.md](./SCHEMA.md)** — Database tables, columns, indexes, and job/queue semantics.
 4. **[CODING_STANDARD.md](./CODING_STANDARD.md)** — How to code quickly for this hackathon: pragmatic DRY/SRP, no automated tests, manual smoke checks, error handling.
+5. **[JUDGING.md](./JUDGING.md)** — Judging criteria, weights, evidence a judge can see, and the pre-demo self-scoring sheet. Read before demo-day polish.
 
 ## Agent operating rules
 - **Goal:** Deliver a reliable live LINE → AI → top-3 recommendation demo, not a production platform.

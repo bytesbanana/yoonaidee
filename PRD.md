@@ -116,10 +116,14 @@ Parallel work begins immediately after agreeing on shared schema, fixture and en
 - Judges can see an example of Codex-assisted building and the resulting code changes.
 
 ## 11. Judging lens
+Full rubric, weights, evidence mapping and self-scoring sheet: **[JUDGING.md](./JUDGING.md)**.
 
-- **Problem framing:** Clear Bangkok housing decision problem and why ordinary lists are insufficient.
+Six criteria:
+- **Problem & solution fit:** Clear Bangkok housing decision problem and why ordinary lists are insufficient.
 - **Build quality:** Reliable complete LINE-to-result experience.
-- **Depth of thinking:** Explain hard constraints, trade-offs, uncertainty and why one zone beats another.
+- **Insight / originality:** Explain hard constraints, trade-offs, uncertainty and why one zone beats another.
+- **Real-world value:** Sourced, actionable output a real renter can act on.
+- **Alignment with build direction:** AI as orchestrator over real tools, LINE as the primary surface.
 - **Effective use of Codex:** Use Codex for bounded tasks, reviews and rapid integration; preserve a visible task/decision log.
 
 ## 12. Risks and decisions
