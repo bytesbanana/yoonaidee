@@ -105,19 +105,11 @@ erDiagram
 | `updated_at` | timestamptz | NO | `now()` | Last status mutation |
 | `completed_at` | timestamptz | YES | — | When committed complete |
 
-**Constraints/indexes:** UNIQUE `idempotency_key`; CHECK `attempts <= max_attempts`; ready/failed partial index `(run_after, created_at)`, running/lease partial index, session recent index. `FAILED` retries only when `attempts < max_attempts` and `run_after <= now()`; at the limit it is terminal. `NEEDS_INPUT` and `WAITING_FOR_HANDLER` are parked and never automatically claimed. The Java consumer owns only `ANALYSIS` jobs: it claims with a 60-second lease and commits before the OpenAI connectivity request. On exact `OK`, it atomically parks the still-owned job and queues one acknowledgement, clearing the lease and restoring the claim's attempt. OpenAI failure creates no success acknowledgement. Expired leased `ANALYSIS` jobs become `FAILED` under a row lock; a retry is delayed by `min(300, 5 * 2^(attempts-1))` seconds. The research handler will need lease renewal if its processing can exceed 60 seconds.
+**Constraints/indexes:** UNIQUE `idempotency_key`; CHECK `attempts <= max_attempts`; ready/failed partial index `(run_after, created_at)`, running/lease partial index, session recent index. `FAILED` retries only when `attempts < max_attempts` and `run_after <= now()`; at the limit it is terminal. `NEEDS_INPUT` remains parked. The Java consumer also claims legacy `WAITING_FOR_HANDLER` ANALYSIS jobs, including rows inserted after the one-time migration. It claims with a 180-second lease, reads the saved snapshot and zones from PostgreSQL, writes a demo result, marks the job `COMPLETED`, and queues the final LINE notification in one transaction. No analysis provider HTTP call runs. Expired leases become `FAILED`; retries are delayed by `min(300, 5 * 2^(attempts-1))` seconds.
 
-The OpenAI request has a 45-second timeout. The acknowledgement uses `analysis-ack:{jobId}` and the text “ได้รับคำขอวิเคราะห์แล้ว ตอนนี้ระบบยังไม่เริ่มวิเคราะห์”. `input_snapshot` and `profile_version` stay unchanged. Apply `docs/migrations/20261121_analysis_acknowledged.sql` to existing databases after the waiting-for-handler migration.
+The notification sender reads `line.channel-access-token` from its active Spring profile and pushes the completion Flex after commit. The result has no scores or unsupported location facts. Apply `docs/migrations/20261121_demo_analysis_completion.sql` after the two earlier analysis migrations.
 
-When the research handler is ready, deploy it and explicitly release parked jobs:
-
-```sql
-UPDATE analysis_jobs
-SET status = 'QUEUED', run_after = now(), updated_at = now()
-WHERE job_type = 'ANALYSIS' AND status = 'WAITING_FOR_HANDLER';
-```
-
-The handler must replace the park step before running this SQL; otherwise the consumer will park the jobs again. `input_snapshot` and `profile_version` stay unchanged. Apply `docs/migrations/20261121_analysis_waiting_for_handler.sql` once to existing databases before starting this consumer.
+The completion migration requeues old `WAITING_FOR_HANDLER` jobs and cancels pending progress acknowledgements. `input_snapshot` and `profile_version` stay unchanged.
 
 ### `zones` — Master candidate residential neighborhoods
 
@@ -127,8 +119,8 @@ The handler must replace the park step before running this SQL; otherwise the co
 | `slug` | text | NO | — | Stable unique zone key |
 | `name_th` | text | NO | — | Thai name |
 | `name_en` | text | YES | — | English name |
-| `center_lat` | numeric(10,7) | NO | — | WGS84 latitude |
-| `center_lng` | numeric(10,7) | NO | — | WGS84 longitude |
+| `center_lat` | numeric(10,7) | YES | — | WGS84 latitude; null for unsourced demo zones |
+| `center_lng` | numeric(10,7) | YES | — | WGS84 longitude; null for unsourced demo zones |
 | `boundary` | jsonb object | YES | — | Optional GeoJSON geometry, application validated |
 | `is_active` | boolean | NO | `true` | Eligible for research |
 | `created_at` | timestamptz | NO | `now()` | Created |

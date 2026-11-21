@@ -100,7 +100,7 @@ The current intake build saves a ready profile and acknowledges it in LINE. Crea
 
 Minimum to trigger research: **destination description**, **maximum monthly rental budget**, **primary transport mode**, and **selected category weights totaling 100%**. Exact coordinates are **not required at this stage**. In Research Stage, the destination must successfully resolve to coordinates for routing. Optional needs (gym, food, max commute, housing type) should not block analysis unless the user's wording makes them essential/hard constraints.
 
-If user says “เริ่มหาเลย”, use documented defaults for optional data only. Never default a missing workplace or invent a budget. If location is ambiguous, Stage 2 may request clarification by setting job `NEEDS_INPUT` and session `WAITING_FOR_USER` and enqueueing an appropriate LINE question.
+If user says “เริ่มหาเลย”, use documented defaults for optional data only. Never default a missing workplace or invent a budget. For ambiguous destination geocoding, the background worker chooses the best Nominatim candidate using the model, records confidence and provenance, and does not send a LINE clarification. If no candidate fits, coordinates remain unknown.
 
 ## 1.5 Functional requirements and acceptance criteria
 
@@ -218,7 +218,7 @@ AI can plan relevant tools, propose weights within guardrails and interpret trad
 ## 3.3 Workflow (analysis job)
 
 1. Claim eligible `ANALYSIS` job with `FOR UPDATE SKIP LOCKED`; acquire lease, increment attempts, read `input_snapshot`, and validate schema/version.
-2. Resolve destination text to coordinates. If ambiguous, **do not guess**: mark job `NEEDS_INPUT`, session `WAITING_FOR_USER`, create a clarification outbox message, and let Conversation AI handle next reply.
+2. Resolve destination text to coordinates using a Nominatim tool call. If multiple candidates fit, the model selects only from returned candidates and the worker records confidence and provenance. If none fits, leave coordinates unknown; do not invent a location or send a LINE clarification from the background worker.
 3. Choose candidate zones (MVP ~10–20 predefined zones), pull/reuse POI, geocoding, supported Routing and Rental listing data via adapters and `api_cache`.
 4. Normalize/cache reusable zone features in `zone_features`. Keep personalized commute scores in the analysis, not in global reusable features.
 5. Check hard constraints first; apply deterministic normalized scoring (0–100), guardrailed weights and rank zones, then properties. Treat unknown feature as missing/low-confidence rather than automatically 0.
@@ -254,7 +254,7 @@ Example cache TTLs proposed in context (not provider guarantees): POI 7 days, ro
 
 Progress state stored in `analysis_jobs`; LIFF polls DB through API. Retry uses `run_after`, `lease_until`, `locked_by`, `attempts`, `max_attempts` and `last_error`. Acquire/renew a lease while running; recover expired leases. Deduplicate job creation by `idempotency_key`. Serialize conversation jobs per session.
 
-**Current implementation phase:** From an already seeded `ANALYSIS` job, the Java worker claims and commits, calls OpenAI for exact `OK` without sending the profile, then atomically parks the owned job in `WAITING_FOR_HANDLER` and queues an `ANALYSIS_ACKNOWLEDGED` LINE message. Failure uses the job's retry rules and queues no success acknowledgement. The intake worker delivers the outbox row via LINE Push. No research, results, session changes, or completed ANALYSIS jobs are produced. Conversation does not yet enqueue ANALYSIS jobs. The full Stage 2 workflow above is planned. Once the handler replaces the park step, reset parked jobs to `QUEUED` using the SQL in the data dictionary.
+**Current implementation phase:** From an already seeded `ANALYSIS` job, the Java worker claims and commits, geocodes the saved destination with OpenAI and Nominatim, then atomically parks the owned job in `WAITING_FOR_HANDLER` and queues an `ANALYSIS_ACKNOWLEDGED` LINE progress message. Failure uses the job's retry rules and queues no success acknowledgement. The Java worker reads `line.channel-access-token` from its active Spring profile and delivers that outbox row via LINE Push after commit; the intake worker delivers conversation messages. No full neighborhood research, results, session changes, or completed ANALYSIS jobs are produced. Conversation does not yet enqueue ANALYSIS jobs. The full Stage 2 workflow above is planned. Once the handler replaces the park step, reset parked jobs to `QUEUED` using the SQL in the data dictionary.
 
 ## 3.6 Acceptance criteria
 

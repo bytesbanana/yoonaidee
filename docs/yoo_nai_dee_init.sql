@@ -88,13 +88,14 @@ CREATE TABLE IF NOT EXISTS zones (
   slug text NOT NULL UNIQUE,
   name_th text NOT NULL,
   name_en text,
-  center_lat numeric(10,7) NOT NULL CHECK (center_lat BETWEEN -90 AND 90),
-  center_lng numeric(10,7) NOT NULL CHECK (center_lng BETWEEN -180 AND 180),
+  center_lat numeric(10,7) CHECK (center_lat BETWEEN -90 AND 90),
+  center_lng numeric(10,7) CHECK (center_lng BETWEEN -180 AND 180),
   boundary jsonb, -- optional GeoJSON; validate GeoJSON coordinates/shape in application
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CHECK (boundary IS NULL OR jsonb_typeof(boundary) = 'object')
+  CHECK (boundary IS NULL OR jsonb_typeof(boundary) = 'object'),
+  CHECK ((center_lat IS NULL) = (center_lng IS NULL))
 );
 
 CREATE TABLE IF NOT EXISTS zone_features (

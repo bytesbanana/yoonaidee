@@ -135,14 +135,12 @@ async function deliverIntakeMessage() {
              split_part(n.idempotency_key, ':', 2) AS job_id
       FROM notification_outbox n JOIN users u ON u.id = n.user_id
       WHERE n.status = 'PENDING'
-        AND ((n.notification_type = 'CONVERSATION_MESSAGE'
-              AND (n.idempotency_key LIKE 'intake:%' OR n.idempotency_key LIKE 'intake-failure:%'))
-          OR (n.notification_type = 'ANALYSIS_ACKNOWLEDGED'
-              AND n.idempotency_key LIKE 'analysis-ack:%'))
+        AND n.notification_type = 'CONVERSATION_MESSAGE'
+        AND (n.idempotency_key LIKE 'intake:%' OR n.idempotency_key LIKE 'intake-failure:%')
         AND n.next_attempt_at <= now()
         AND NOT EXISTS (
           SELECT 1 FROM notification_outbox earlier WHERE earlier.session_id = n.session_id
-            AND earlier.status = 'PENDING'
+            AND earlier.status IN ('PENDING', 'PROCESSING')
             AND (earlier.idempotency_key LIKE 'intake:%'
               OR earlier.idempotency_key LIKE 'intake-failure:%'
               OR earlier.idempotency_key LIKE 'analysis-ack:%')
