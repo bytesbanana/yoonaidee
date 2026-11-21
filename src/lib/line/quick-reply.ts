@@ -7,7 +7,7 @@ export type LineQuickReply = {
   }>;
 };
 
-const MAX_ITEMS = 4;
+const MAX_ITEMS = 3;
 const MAX_LABEL_LENGTH = 20;
 const MAX_TEXT_LENGTH = 300;
 
@@ -35,5 +35,5 @@ export function buildQuickReply(options: QuickReplyOption[] | undefined): LineQu
     items.push({ type: "action", action: { type: "message", label, text } });
     if (items.length >= MAX_ITEMS) break;
   }
-  return items.length ? { items } : undefined;
+  return items.length >= 2 ? { items } : undefined;
 }

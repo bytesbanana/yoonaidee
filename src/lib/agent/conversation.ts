@@ -37,9 +37,9 @@ const extractionSchema = z.object({
 const suggestion = z.object({ label: z.string().trim().min(1).max(80), text: z.string().trim().min(1).max(300) });
 const codexOutputSchema = extractionSchema.extend({
   suggestedReplies: z.object({
-    destination: z.array(suggestion).max(4),
-    budget: z.array(suggestion).max(4),
-    transport: z.array(suggestion).max(4),
+    destination: z.array(suggestion).max(3),
+    budget: z.array(suggestion).max(3),
+    transport: z.array(suggestion).max(3),
   }),
 });
 const suggestionEnvelope = z.object({ suggestedReplies: z.object({
@@ -47,22 +47,31 @@ const suggestionEnvelope = z.object({ suggestedReplies: z.object({
 }).partial() });
 const confirmationCommand = /^(search|start search|yes|confirm|ค้นหา|เริ่มค้นหา|พร้อม|ยืนยัน)[.!]?$/i;
 const fallbackTransport = {
-  th: ["BTS/MRT", "รถยนต์", "มอเตอร์ไซค์", "เดิน"],
-  en: ["BTS/MRT", "Car", "Motorcycle", "Walking"],
+  th: ["BTS/MRT", "รถยนต์", "มอเตอร์ไซค์"],
+  en: ["BTS/MRT", "Car", "Motorcycle"],
 };
-const searchSuggestion = {
-  th: [{ label: "ค้นหา", text: "ค้นหา" }],
-  en: [{ label: "Search", text: "search" }],
+const editCommand = /^(change preferences|แก้ไขข้อมูล)$/i;
+const searchSuggestions = {
+  th: [{ label: "ค้นหา", text: "ค้นหา" }, { label: "แก้ไขข้อมูล", text: "แก้ไขข้อมูล" }],
+  en: [{ label: "Search", text: "search" }, { label: "Change preferences", text: "Change preferences" }],
 };
 
 function getSuggestions(output: unknown, kind: "destination" | "budget" | "transport", language: "th" | "en") {
   const raw = suggestionEnvelope.safeParse(output).data?.suggestedReplies[kind];
-  const options = Array.isArray(raw) ? raw.slice(0, 4).flatMap((entry) => {
-    const parsed = suggestion.safeParse(entry);
-    return parsed.success && !confirmationCommand.test(parsed.data.text) && !/^(retry|ลองใหม่)$/i.test(parsed.data.text)
-      ? [parsed.data] : [];
-  }) : [];
-  return options.length || kind !== "transport" ? options : fallbackTransport[language].map((text) => ({ label: text, text }));
+  const options = new Map<string, z.infer<typeof suggestion>>();
+  if (Array.isArray(raw)) {
+    for (const entry of raw) {
+      const parsed = suggestion.safeParse(entry);
+      if (!parsed.success) continue;
+      const { text } = parsed.data;
+      if (confirmationCommand.test(text) || editCommand.test(text) || /^(retry|ลองใหม่)$/i.test(text)) continue;
+      const key = text.normalize("NFC").toLowerCase();
+      if (!options.has(key)) options.set(key, parsed.data);
+      if (options.size === 3) break;
+    }
+  }
+  if (options.size >= 2) return [...options.values()];
+  return kind === "transport" ? fallbackTransport[language].map((text) => ({ label: text, text })) : [];
 }
 
 const instructions = `You are the housing intake assistant for Yoo Nai Dee in LINE.
@@ -79,7 +88,7 @@ Use the closest predefined category when it matches. Preserve existing custom ca
 Set weight to a whole percent only when the user supplied it or it was already saved. Leave unspecified weights null. Lifestyle categories and weights are optional. If a required field is genuinely unresolved, return null for that field so the application can ask for it.
 Maintain the existing lifestyle importance fields from the user's stated priorities; leave unmentioned interests null. When the prior question also invited a nearby lifestyle priority, capture what the user wants near home (including activities they name in response). A transport-only answer is valid; never copy examples from the question or infer a lifestyle priority from transport. Capture explicit deal-breakers under otherRequirements as needed.
 If the latest message is unrelated to housing, preserve the saved profile and do not infer new preferences. For a new session, use nulls, empty arrays, and false for unknown fields where applicable. Default language is Thai. Never suggest zones or listings, claim facts, or ask for contact details.
-In suggestedReplies, return arrays for destination, budget, and transport. Give up to four distinct, directly sendable answers in the conversation language for an unresolved field; otherwise return an empty array. Each option has a short label (at most 20 characters) and text that the user would send (at most 300 characters). For destination or budget, only offer candidates explicitly mentioned by the user that would answer the question as asked; otherwise return an empty array. For transport, offer relevant common modes as choices, not assumptions. Never copy a suggested answer into the extracted profile or suggest search, confirmation, or retry commands.`;
+In suggestedReplies, return arrays for destination, budget, and transport. Give two or three distinct, directly sendable answers in the conversation language for an unresolved field. Choose two when only two strong answers fit; add a third only if it is useful in context. If fewer than two fit, return an empty array. Each option has a short label (at most 20 characters) and text that the user would send (at most 300 characters). For destination or budget, only offer candidates explicitly mentioned by the user that would answer the question as asked; otherwise return an empty array. For transport, offer relevant common modes as choices, not assumptions. Never copy a suggested answer into the extracted profile or suggest search, confirmation, or retry commands.`;
 
 function toProfile(
   fields: z.infer<typeof profileFields>,
@@ -118,6 +127,7 @@ const questions = {
     transport: "ปกติเดินทางด้วยอะไรเป็นหลักครับ เช่น BTS/MRT รถยนต์ มอเตอร์ไซค์ หรือเดิน?",
     lifestyleInvite: "ถ้ามีอะไรที่อยากให้อยู่ใกล้บ้านเป็นพิเศษ เช่น สวนไว้ไปวิ่ง ยิมที่ไปประจำ หรือตลาด ก็บอกได้เลยครับ",
     confirmSearch: "ข้อมูลพร้อมแล้วครับ พร้อมให้เริ่มค้นหาย่านไหมครับ? พิมพ์ “ค้นหา” เพื่อเริ่ม หรือบอกข้อมูลที่อยากแก้ไขได้เลย",
+    editPreferences: "อยากแก้ไขข้อมูลอะไรครับ? บอกความต้องการใหม่ได้เลย",
     ready: "บันทึกความต้องการที่พักของคุณแล้วครับ",
   },
   en: {
@@ -126,6 +136,7 @@ const questions = {
     transport: "How do you usually get around, for example BTS/MRT, car, motorcycle, or walking?",
     lifestyleInvite: "If there’s anything you’d like close to home, like a park for running, your regular gym, or a market, feel free to mention it too.",
     confirmSearch: "Ready to start searching for neighborhoods? Reply “search” to start, or tell me what you’d like to change.",
+    editPreferences: "What would you like to change? Tell me your updated preferences.",
     ready: "I’ve saved your housing preferences.",
   },
 };
@@ -168,7 +179,7 @@ export function evaluateConversation(output: unknown, previousProfile?: unknown)
       || Object.values(fields.lifestyle).some((value) => value !== null);
     question = hasLifestyle ? copy.transport : `${copy.transport}\n${copy.lifestyleInvite}`;
   }
-  const suggestions = kind === "confirmSearch" ? searchSuggestion[language] : getSuggestions(output, kind, language);
+  const suggestions = kind === "confirmSearch" ? searchSuggestions[language] : getSuggestions(output, kind, language);
   return { profile: toProfile(fields, language, withAnchor(fields, previousProfile)), ready: false, question, reply: question, suggestions };
 }
 
@@ -210,10 +221,14 @@ export async function processConversation(input: {
   previousQuestion: string | null;
 }) {
   const message = input.message.trim();
-  if (confirmationCommand.test(message)) {
+  if (confirmationCommand.test(message) || editCommand.test(message)) {
     const saved = savedSearchProfile.safeParse(input.previousProfile);
     if (saved.success && input.previousQuestion === questions[saved.data.language].confirmSearch) {
-      return { profile: saved.data, ready: true, question: null, reply: questions[saved.data.language].ready };
+      const copy = questions[saved.data.language];
+      if (editCommand.test(message)) {
+        return { profile: saved.data, ready: false, question: copy.editPreferences, reply: copy.editPreferences };
+      }
+      return { profile: saved.data, ready: true, question: null, reply: copy.ready };
     }
   }
 
@@ -237,7 +252,7 @@ export async function processConversation(input: {
       ready: false,
       question: questions[previous.language].confirmSearch,
       reply: questions[previous.language].confirmSearch,
-      suggestions: searchSuggestion[previous.language],
+      suggestions: searchSuggestions[previous.language],
     };
   }
 
