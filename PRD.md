@@ -40,6 +40,8 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 
 The home page offers **Living zone recommendation** and **Your profile**. After LINE sign-in, **Current** shows the latest completed analysis from PostgreSQL and **Past searches** opens earlier completed analyses. Zone details use the saved analysis snapshot. Use the Yoo Nai Dee LINE chat to request an analysis. **View recommendations** on the profile opens the saved results.
 
+**Reset profile** clears the active housing preferences and profile details after confirmation. The next LINE message starts a fresh intake. The LINE account and saved recommendations remain available.
+
 ## 5. User journey
 
 1. User sends a free-form LINE message.

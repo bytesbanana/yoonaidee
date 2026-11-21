@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { GooglePlacePicker } from "./google-place-picker";
 import { BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
 import {
@@ -123,6 +124,9 @@ function PriorityEditor({
   const [limitMessage, setLimitMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
   const [error, setError] = useState("");
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState("");
   const total = rows.reduce((sum, { value }) => sum + Number(value), 0);
   const locationsValid = rows.every(({ locationText }) => preferencePlaces.safeParse(locationsFromText(locationText)).success);
   const valid = rows.every(({ value }) => !value || Number(value) >= 1) && total <= 100 && locationsValid;
@@ -136,7 +140,7 @@ function PriorityEditor({
   const candidate = selected === "custom" ? categoryFromName(customName) : selected;
   const duplicate = usedCategories.has(categoryKey(candidate));
   const canAdd = categoryId.safeParse(candidate).success && !duplicate && rows.length < maxPreferenceCategories;
-  const busy = status === "saving" || status === "conflict";
+  const busy = resetting || status === "saving" || status === "conflict";
 
   function updateValue(category: Category, value: string, next: string) {
     if (!/^\d{0,3}$/.test(next)) return;
@@ -211,6 +215,32 @@ function PriorityEditor({
       setError("Could not save your priorities. Try again shortly.");
       setStatus("error");
     }
+  }
+
+  async function resetProfile() {
+    if (!saved || busy || message) return;
+    const headers = getAuthHeaders();
+    if (!headers) {
+      setResetError("Sign in with LINE again to reset your profile.");
+      return;
+    }
+    setResetError("");
+    setResetting(true);
+    try {
+      const response = await fetch(`/api/settings?sessionId=${encodeURIComponent(saved.sessionId)}`, {
+        method: "DELETE",
+        headers,
+      });
+      if (response.ok) {
+        reload();
+        return;
+      }
+      const result = await response.json();
+      setResetError(result.error ?? "Could not reset your profile. Try again shortly.");
+    } catch {
+      setResetError("Could not reset your profile. Try again shortly.");
+    }
+    setResetting(false);
   }
 
   return (
@@ -366,11 +396,49 @@ function PriorityEditor({
             {status === "conflict" ? (
               <button type="button" onClick={reload} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">Reload saved priorities</button>
             ) : (
-              <button type="submit" disabled={!valid || !changed || status === "saving"} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:bg-stone-200 disabled:text-stone-600">
+              <button type="submit" disabled={!valid || !changed || busy} className="w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:bg-stone-200 disabled:text-stone-600">
                 {status === "saving" ? "Saving…" : "Save priorities"}
               </button>
             )}
           </div>
+      )}
+      {!message && saved && (
+        <div className="border-t border-stone-200 px-5 py-4 sm:px-6">
+          <AlertDialog.Root
+            open={resetOpen}
+            onOpenChange={(open) => {
+              if (resetting) return;
+              setResetError("");
+              setResetOpen(open);
+            }}
+          >
+            <AlertDialog.Trigger
+              type="button"
+              disabled={busy}
+              className="min-h-11 rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Reset profile
+            </AlertDialog.Trigger>
+            <AlertDialog.Portal>
+              <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-stone-950/50" />
+              <AlertDialog.Popup className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 text-stone-900 shadow-xl">
+                <AlertDialog.Title className="text-lg font-semibold">Reset your housing profile?</AlertDialog.Title>
+                <AlertDialog.Description className="mt-2 text-sm text-stone-600">
+                  This clears your saved housing details, lifestyle priorities, and any unsaved edits. Your next LINE message starts a fresh intake.
+                </AlertDialog.Description>
+                {resetError && <p role="alert" className="mt-3 text-sm text-red-800">{resetError}</p>}
+                <div className="mt-5 flex justify-end gap-2">
+                  <AlertDialog.Close type="button" disabled={resetting} className="min-h-11 rounded-xl border border-stone-300 px-4 text-sm font-semibold hover:bg-stone-100 disabled:opacity-50">
+                    Cancel
+                  </AlertDialog.Close>
+                  <button type="button" disabled={resetting} onClick={resetProfile} className="min-h-11 rounded-xl bg-red-800 px-4 text-sm font-semibold text-white hover:bg-red-900 disabled:opacity-50">
+                    {resetting ? "Resetting…" : "Reset profile"}
+                  </button>
+                </div>
+              </AlertDialog.Popup>
+            </AlertDialog.Portal>
+          </AlertDialog.Root>
+        </div>
       )}
       {message && (
         <div className="px-5 py-5 sm:px-6">

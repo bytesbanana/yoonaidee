@@ -25,6 +25,7 @@ async function runConversation() {
       JOIN conversation_messages m ON m.id = j.message_id
       JOIN conversation_sessions s ON s.id = j.session_id
       WHERE j.job_type = 'CONVERSATION' AND j.status = 'QUEUED' AND j.run_after <= now()
+        AND s.closed_at IS NULL
         AND NOT EXISTS (
           SELECT 1 FROM analysis_jobs earlier
           JOIN conversation_messages em ON em.id = earlier.message_id
@@ -70,7 +71,7 @@ async function runConversation() {
     const { rows: [session] } = await client.query<{ next_message_sequence: string }>(
       `WITH prior AS (
          SELECT id, (preferences - 'language') IS DISTINCT FROM ($2::jsonb - 'language') AS changed, ready_for_analysis
-         FROM conversation_sessions WHERE id = $1 AND profile_version = $7 FOR UPDATE
+         FROM conversation_sessions WHERE id = $1 AND profile_version = $7 AND closed_at IS NULL FOR UPDATE
        )
        UPDATE conversation_sessions s SET preferences = $2,
           profile_version = s.profile_version + CASE WHEN prior.changed OR ($4 AND NOT prior.ready_for_analysis) THEN 1 ELSE 0 END,

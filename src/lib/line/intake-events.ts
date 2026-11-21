@@ -119,7 +119,7 @@ export async function handleTextEvent(event: z.infer<typeof textEvent>): Promise
     mark("db.check_active_job");
     const { rowCount: busy } = await client.query(
       `SELECT 1 FROM analysis_jobs j JOIN conversation_sessions s ON s.id = j.session_id
-       WHERE s.user_id = $1 AND j.job_type = 'ANALYSIS' AND (
+       WHERE s.user_id = $1 AND s.closed_at IS NULL AND j.job_type = 'ANALYSIS' AND (
          j.status IN ('QUEUED', 'PROCESSING', 'COLLECTING', 'SCORING', 'EXPLAINING')
          OR (j.status = 'FAILED' AND j.attempts < j.max_attempts)
        ) LIMIT 1`, [user.id],

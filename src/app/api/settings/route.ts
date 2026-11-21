@@ -67,6 +67,38 @@ export async function GET(request: Request) {
   }
 }
 
+export async function DELETE(request: Request) {
+  try {
+    const user = await authenticateLine(request, "Profile settings are unavailable. Try again shortly.");
+    if (user instanceof Response) return user;
+    const sessionId = z.uuid().safeParse(new URL(request.url).searchParams.get("sessionId"));
+    if (!sessionId.success) return json({ error: "Reload your profile before resetting it." }, 400);
+
+    await intakeTransaction(async (client) => {
+      // Take the same user lock as LINE intake before closing the active session.
+      const { rows: [owner] } = await client.query<{ id: string }>(
+        "SELECT id FROM users WHERE line_user_id = $1 FOR UPDATE",
+        [user.userId],
+      );
+      if (!owner) return;
+
+      await client.query(
+        `UPDATE conversation_sessions
+         SET preferences = '{}'::jsonb, profile_source_metadata = '{}'::jsonb,
+             awaiting_question = NULL, ready_for_analysis = false,
+             profile_version = profile_version + 1, state = 'CLOSED',
+             closed_at = now(), updated_at = now()
+         WHERE id = $1 AND user_id = $2 AND closed_at IS NULL`,
+        [sessionId.data, owner.id],
+      );
+    });
+    return new Response(null, { status: 204, headers });
+  } catch {
+    console.error("line.settings.reset_failed");
+    return json({ error: "Could not reset your profile. Try again shortly." }, 503);
+  }
+}
+
 function savedPriorities(session: Session) {
   return {
     sessionId: session.id,
