@@ -1,6 +1,7 @@
 import { intakePool, intakeTransaction } from "@/lib/db/intake-db";
 import { z } from "zod";
 import { categoryId, categoryKey, maxPreferenceCategories, preferenceCategories, preferencePlaces } from "@/lib/preferences/categories";
+import { normalizeCategoryLocations } from "@/lib/preferences/locations";
 
 const verifiedToken = z.object({ sub: z.string().min(1) });
 const verifiedAccessToken = z.object({ client_id: z.string(), expires_in: z.number() });
@@ -145,7 +146,7 @@ export async function PATCH(request: Request) {
       if (sessionId !== null || version !== null) return conflict();
       const created = await intakeTransaction(async (client) => {
         await client.query("INSERT INTO users (line_user_id) VALUES ($1) ON CONFLICT DO NOTHING", [user]);
-        const categories = weights.map((item) => ({ ...item, places: item.places ?? [] }));
+        const categories = weights.map((item) => ({ ...item, places: normalizeCategoryLocations(item.places ?? []) }));
         const { rows: [inserted] } = await client.query<Session>(
           `INSERT INTO conversation_sessions (user_id, preferences, profile_version)
            SELECT id, $2::jsonb, 1 FROM users WHERE line_user_id = $1
@@ -162,7 +163,10 @@ export async function PATCH(request: Request) {
 
     const { categories = [] } = storedProfile.parse(session.preferences);
     const placesByCategory = new Map(categories.map(({ category, places }) => [category, places]));
-    const updated = weights.map((item) => ({ ...item, places: item.places ?? placesByCategory.get(item.category) ?? [] }));
+    const updated = weights.map((item) => ({
+      ...item,
+      places: item.places ? normalizeCategoryLocations(item.places) : placesByCategory.get(item.category) ?? [],
+    }));
     const { rows: [saved] } = await intakePool.query<Session>(
       `UPDATE conversation_sessions
        SET preferences = jsonb_set(preferences, '{categories}', $3::jsonb),
