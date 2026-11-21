@@ -15,7 +15,7 @@ Users describe living preferences in natural Thai through LINE OA. The system as
 2. **Background Research Agent:** Consume the structured profile snapshot from an `ANALYSIS` job; perform geocoding as needed, invoke third-party data tools, normalize evidence, score zones/properties via deterministic code, generate evidence-based trade-offs, and persist the **full** output in PostgreSQL.
 3. **LINE / LIFF + Results API:** LINE messages contain a **brief preview only** and a LIFF deep link. When opened, LIFF calls the backend Results API; the API authorizes the user and reads full data from PostgreSQL. LIFF never accesses PostgreSQL directly.
 
-Stage 1 captures named places under optional priority categories. Stage 2 resolves those places when routing or proximity evidence is needed.
+**Note on source-vs-updated design:** The 19 Nov context mentioned validating/resolving workplace in Stage 1. Per the latest conversation, third-party map/geocoding belongs to Stage 2. Stage 1 validates that a destination description was supplied; Stage 2 resolves coordinates. Ambiguity discovered by Stage 2 returns a clarification request to Stage 1.
 
 ### High-level flow
 
@@ -75,10 +75,12 @@ Turn one or many user messages into a coherent, versioned `HousingPreferenceProf
 ```json
 {
   "schemaVersion": 1,
-  "categories": [
-    {"category": "work", "places": ["อโศก"], "weight": 60},
-    {"category": "gym", "places": [], "weight": 40}
-  ],
+  "destinations": [{
+    "type": "workplace",
+    "name": "อโศก",
+    "location": {"lat": null, "lng": null, "resolved": false},
+    "frequencyPerWeek": null
+  }],
   "budget": {"maxMonthlyRent": 15000, "currency": "THB", "strict": true},
   "transport": {"primary": "public_transit", "preferredModes": ["BTS", "MRT"]},
   "constraints": {"maxCommuteMinutes": null, "commuteIsStrict": false},
@@ -94,9 +96,11 @@ Turn one or many user messages into a coherent, versioned `HousingPreferenceProf
 
 ## 1.4 Readiness rules
 
-LINE intake asks for a **maximum monthly rental budget** and **primary transport mode**, then queues an analysis job after explicit search confirmation. Priority categories, places, and percentages are optional.
+The current intake build saves a ready profile and acknowledges it in LINE. Creating an analysis job belongs to the next stage.
 
-If a place needed for routing is ambiguous, Stage 2 may request clarification by setting job `NEEDS_INPUT` and session `WAITING_FOR_USER` and enqueueing a LINE question.
+Minimum to trigger research: **destination description**, **maximum monthly rental budget**, **primary transport mode**, and **selected category weights totaling 100%**. Exact coordinates are **not required at this stage**. In Research Stage, the destination must successfully resolve to coordinates for routing. Optional needs (gym, food, max commute, housing type) should not block analysis unless the user's wording makes them essential/hard constraints.
+
+If user says “เริ่มหาเลย”, use documented defaults for optional data only. Never default a missing workplace or invent a budget. If location is ambiguous, Stage 2 may request clarification by setting job `NEEDS_INPUT` and session `WAITING_FOR_USER` and enqueueing an appropriate LINE question.
 
 ## 1.5 Functional requirements and acceptance criteria
 
@@ -214,7 +218,7 @@ AI can plan relevant tools, propose weights within guardrails and interpret trad
 ## 3.3 Workflow (analysis job)
 
 1. Claim eligible `ANALYSIS` job with `FOR UPDATE SKIP LOCKED`; acquire lease, increment attempts, read `input_snapshot`, and validate schema/version.
-2. Resolve named places from priority categories when routing or proximity evidence requires coordinates. If a place is ambiguous, mark job `NEEDS_INPUT`, session `WAITING_FOR_USER`, create a clarification outbox message, and let Conversation AI handle the next reply.
+2. Resolve destination text to coordinates. If ambiguous, **do not guess**: mark job `NEEDS_INPUT`, session `WAITING_FOR_USER`, create a clarification outbox message, and let Conversation AI handle next reply.
 3. Choose candidate zones (MVP ~10–20 predefined zones), pull/reuse POI, geocoding, supported Routing and Rental listing data via adapters and `api_cache`.
 4. Normalize/cache reusable zone features in `zone_features`. Keep personalized commute scores in the analysis, not in global reusable features.
 5. Check hard constraints first; apply deterministic normalized scoring (0–100), guardrailed weights and rank zones, then properties. Treat unknown feature as missing/low-confidence rather than automatically 0.
@@ -285,7 +289,7 @@ Progress state stored in `analysis_jobs`; LIFF polls DB through API. Retry uses 
 
 ## 6. MVP test scenarios
 
-1. User supplies budget and transport in LINE and confirms the search. Intake queues one analysis job.
+1. User supplies workplace/budget/transport in one LINE message -> one conversation job -> one analysis job.
 2. User omits transport -> Conversation AI asks one targeted question; no research API call.
 3. Duplicate LINE webhook arrives -> no duplicate inbound message/job.
 4. User changes budget during processing -> running job remains tied to old `input_snapshot`; subsequent job uses new profile version.
@@ -302,7 +306,7 @@ Progress state stored in `analysis_jobs`; LIFF polls DB through API. Retry uses 
 
 Apply `docs/yoo_nai_dee_init.sql` to PostgreSQL. Set `DATABASE_URL`, `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `OPENAI_API_KEY`, and `CODEX_MODEL` on the Next.js web service. Point LINE at `/api/line/webhook` and enable webhook redelivery. The legacy `npm run intake:worker` does not consume `ANALYSIS` jobs and is not needed for new intake.
 
-The signed LINE `userId` identifies the saved profile. Codex extracts preferences; code checks maximum monthly rent and transport. Lifestyle and weights are optional. The API saves partial progress and sends one direct text question. After explicit confirmation, it saves the profile and one immutable `ANALYSIS` job snapshot in the same transaction, then sends a Flex push. Messages received while that user has a queued/running analysis are deduplicated and otherwise ignored. `retry` / `ลองใหม่` requeues the same saved profile after terminal failure. LINE reply failure does not undo the committed intake.
+The signed LINE `userId` identifies the saved profile. Codex extracts preferences; code checks destination, maximum monthly rent, and transport. Lifestyle and weights are optional. The API saves partial progress and sends one direct text question. When ready, it saves the new profile and one immutable `ANALYSIS` job snapshot in the same transaction, then replies with Flex. Messages received while that user has a queued/running analysis are deduplicated and otherwise ignored. `retry` / `ลองใหม่` requeues the same saved profile after terminal failure. LINE reply failure does not undo the committed intake.
 
 Codex runs inline as requested. LINE reports webhook timeouts beyond two seconds, so a successful extraction can still trigger redelivery; deduplication protects already committed work. A model error rolls back intake and returns `503`. Verify hosted timing before production use. Deploy on a restricted Node host/container without secret-bearing mounts, and verify the SDK's tool and sandbox settings on that host. The LINE user ID is not sent to Codex.
 

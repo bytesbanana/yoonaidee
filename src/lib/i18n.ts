@@ -47,6 +47,7 @@ const thai: Record<string, string> = {
   "Bangkok illustration": "ภาพประกอบกรุงเทพฯ",
   "Profile Details": "รายละเอียดโปรไฟล์",
   "LINE Display Name": "ชื่อที่แสดงใน LINE",
+  "Destination": "จุดหมายปลายทาง",
   "Monthly Rent Ceiling": "ค่าเช่าสูงสุดต่อเดือน",
   "Transport": "วิธีเดินทาง",
   "Housing Types": "ประเภทที่อยู่อาศัย",

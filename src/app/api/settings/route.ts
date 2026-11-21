@@ -8,6 +8,7 @@ const storedProfile = z.object({
   categories: preferenceCategories.optional(),
   budget: z.object({ maxMonthlyRent: z.number().positive().nullable() }).optional(),
   transport: z.object({ primary: z.string().nullable(), preferredModes: z.array(z.string()).optional() }).optional(),
+  destinations: z.array(z.object({ name: z.string() })).optional(),
   housing: z.object({ propertyTypes: z.array(z.string()) }).optional(),
 });
 
@@ -56,6 +57,7 @@ export async function GET(request: Request) {
         budget: data.budget?.maxMonthlyRent ?? null,
         transport: data.transport?.primary ?? null,
         preferredModes: data.transport?.preferredModes ?? [],
+        destination: data.destinations?.[0]?.name ?? null,
         housing: data.housing?.propertyTypes ?? [],
       },
     });

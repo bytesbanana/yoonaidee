@@ -25,7 +25,7 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 | Priority | Feature | Done when… |
 | --- | --- | --- |
 | P0 | LINE entry | Webhook verifies LINE signature, deduplicates events, replies to intake; queues analysis only when ready |
-| P0 | Conversation AI | Saves all clear preferences from each message, including budget, transport, and optional priorities with named places |
+| P0 | Conversation AI | Saves all clear preferences from each message, even when it answers more than the last question; keeps saved preferences unless the user changes or removes them |
 | P0 | Clarification | Asks one concise question when a critical detail is missing or ambiguous |
 | P0 | Neighborhood discovery | Agent calls `searchNeighborhoods` and `getNeighborhoodDetails` against prepared Bangkok JSON |
 | P0 | Explainable top 3 | Output has validated IDs, scores, reason(s), one trade-off per neighborhood |
@@ -46,7 +46,7 @@ The Mini App home opens directly to **Your recommendations**. After LINE sign-in
 
 1. User sends a free-form LINE message.
 2. Webhook loads PostgreSQL memory by verified LINE user ID. It silently acknowledges messages while that user has an active analysis.
-3. Webhook uses Codex to update preferences. Missing budget or transport gets a text question with no job. If no lifestyle preference is known, the transport question also invites the user to mention what they want near home. Answering only the transport question is enough to finish the interview; no lifestyle turn or weights required. Clarifications show two or three context-specific LINE quick replies when useful; otherwise the bot asks for a typed answer. Tapping one sends a normal text message; users can always type their own answer. Once budget and transport are known, the bot asks for confirmation and offers localized Search and Change preferences buttons. An explicit confirmation queues one `ANALYSIS` job with the saved profile snapshot and triggers a Flex push.
+3. Webhook uses Codex to update preferences. Missing destination, budget, or transport gets a text question with no job. If no lifestyle preference is known, the transport question also invites the user to mention what they want near home. Answering only the transport question is enough to finish the interview; no lifestyle turn or weights required. Clarifications show two or three context-specific LINE quick replies when useful; otherwise the bot asks for a typed answer. Tapping one sends a normal text message; users can always type their own answer. Once destination, budget, and transport are known, the bot asks for confirmation and offers localized Search and Change preferences buttons. An explicit confirmation queues one `ANALYSIS` job with the saved profile snapshot and triggers a Flex push.
 4. Research agent calls neighborhood tools, compares options, and returns structured recommendations.
 5. A deterministic function computes/verifies numerical scores when feature values exist; AI explains trade-offs without fabricating numbers.
 6. LINE sends a Flex summary with an optional LIFF results link.
@@ -54,13 +54,12 @@ The Mini App home opens directly to **Your recommendations**. After LINE sign-in
 ## 6. Functional requirements
 
 ### Required preference fields
+- `workplace`: named destination, ideally resolved to coordinates before commute claims.
 - `budget.max`: positive integer THB/month.
 - `transport.primary`: BTS/MRT, driving, walking, other or unknown.
+- `lifestyle`: optional interests and importance.
 
-### Optional priorities
-- `categories`: interests such as Work, School, and Gym, with optional named places and percentages.
-
-Ask for a missing rent ceiling or primary transport mode. Once both are known, ask the user to confirm the search.
+If work location, budget, or travel mode is unclear enough to change results, ask. Optional fields get explicit defaults. If user says “start searching,” proceed using stated assumptions unless a hard constraint is unresolved.
 
 ### Profile weight defaults
 On **Save priorities**, `/profile` splits the remaining percentage among selected categories with blank weights and stores the resulting whole numbers. Earlier blank rows receive any rounding remainder. Explicit weights stay unchanged; if there’s less than 1% available per blank row, lower a weight before saving. Fully specified weights can total less than 100%. Opening `/profile` does not update saved weights.
@@ -117,7 +116,7 @@ Parallel work begins immediately after agreeing on shared schema, fixture and en
 ## 10. Demo success checklist
 
 - One live LINE conversation progresses from a request to three relevant recommendations.
-- When asked for the rent ceiling, reply with a workplace, rent ceiling, and gym preference together. All three are saved, and the next question asks only for transport. After answering with a transport mode, the bot asks for search confirmation without dropping the earlier preferences.
+- When asked for a workplace, reply with workplace, rent ceiling, and gym preference together. All three are saved, and the next question asks only for transport. After answering with a transport mode, the bot asks for search confirmation without dropping the earlier preferences.
 - Top 3 Flex cards display consistent scores, reasons and trade-offs.
 - A data-dependent fact can be traced to the snapshot or tool response.
 - Mock fallback works if an outside API is rate-limited.

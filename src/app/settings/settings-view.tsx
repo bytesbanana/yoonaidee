@@ -7,6 +7,7 @@ import { useLanguage } from "../providers/language-provider";
 import { useLiff } from "../providers/LiffProvider";
 import { hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
 import { formatHousingType, formatPriorityCategory, formatPriorityLocation, formatTransport } from "@/lib/preferences/display";
+import { normalizeLocation } from "@/lib/preferences/locations";
 import { lineAuthHeaders } from "@/lib/line/liff-auth";
 
 type Settings = {
@@ -16,6 +17,7 @@ type Settings = {
   budget: number | null;
   transport: string | null;
   preferredModes: string[];
+  destination: string | null;
   housing: string[];
 };
 
@@ -110,7 +112,11 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
     );
   }
 
-  const details = housingDetails.filter(([, value]) => value);
+  const settingsDetails: [string, string | null | undefined][] = [
+    [t("Destination"), settings?.destination && normalizeLocation(settings.destination)],
+    ...housingDetails,
+  ];
+  const details = settingsDetails.filter(([, value]) => value);
 
   return (
     <main className="flex-1 bg-stone-100 px-5 py-10 text-stone-900 sm:py-16">

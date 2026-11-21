@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { processConversation, withoutLegacyDestination } from "../agent/conversation";
+import { processConversation } from "../agent/conversation";
 import { intakeTransaction } from "../db/intake-db";
 import { buildAnalysisQueuedFlex, type IntakeLineMessage } from "./intake-flex";
 import { buildQuickReply } from "./quick-reply";
@@ -147,7 +147,7 @@ export async function handleTextEvent(event: z.infer<typeof textEvent>): Promise
       );
       if (!last?.terminal_failure) return finish({});
       await client.query("UPDATE conversation_sessions SET state = 'READY', updated_at = now() WHERE id = $1", [session.id]);
-      return finish(await queueAnalysis(withoutLegacyDestination(session.preferences), session.profile_version, `analysis-retry:${message.id}`));
+      return finish(await queueAnalysis(session.preferences, session.profile_version, `analysis-retry:${message.id}`));
     }
 
     // Any Codex failure rolls back the event as well as the profile, allowing LINE redelivery.
