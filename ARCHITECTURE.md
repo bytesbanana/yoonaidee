@@ -32,6 +32,7 @@ Two logical AI stages, **not** two services or a complicated multi-agent framewo
 | Concern | Choice |
 | --- | --- |
 | UI + API | Next.js App Router + TypeScript |
+| Client data fetching | TanStack Query |
 | Runtime | Node.js (Next.js server + separate worker repo); Docker Compose planned |
 | Styling | Tailwind CSS; shadcn/ui only if useful |
 | AI | OpenAI API, tool calling, structured output |
