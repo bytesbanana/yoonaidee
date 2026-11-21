@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -31,15 +32,11 @@ export async function generateMetadata({ params }: ZonePageProps): Promise<Metad
 
 export default async function ZonePage({ params, searchParams }: ZonePageProps) {
   const zone = await getZone(params);
-  const pastResult = findPastResult((await searchParams).version);
-  const backHref = pastResult ? `/recommendations?version=${pastResult.version}` : "/recommendations";
-
   return (
     <>
-      <Link href={backHref} className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[#164334] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4">
-        <ArrowLeft aria-hidden="true" className="size-4" />
-        {pastResult ? `Back to version ${pastResult.version}` : "All zones"}
-      </Link>
+      <Suspense fallback={<div aria-hidden="true" className="h-11" />}>
+        <ZoneBackLink searchParams={searchParams} />
+      </Suspense>
 
       <header className="mt-4 overflow-hidden rounded-[2rem] bg-[#163a2f] text-[#faf8ed]">
         <div className="relative aspect-[16/8] bg-[#eaf1e6]">
@@ -91,5 +88,17 @@ export default async function ZonePage({ params, searchParams }: ZonePageProps) 
         </ul>
       </section>
     </>
+  );
+}
+
+async function ZoneBackLink({ searchParams }: Pick<ZonePageProps, "searchParams">) {
+  const pastResult = findPastResult((await searchParams).version);
+  const backHref = pastResult ? `/recommendations?version=${pastResult.version}` : "/recommendations";
+
+  return (
+    <Link href={backHref} className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[#164334] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4">
+      <ArrowLeft aria-hidden="true" className="size-4" />
+      {pastResult ? `Back to version ${pastResult.version}` : "All zones"}
+    </Link>
   );
 }

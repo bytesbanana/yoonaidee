@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,15 +13,7 @@ type RecommendationsPageProps = {
   searchParams: Promise<{ view?: string | string[]; version?: string | string[] }>;
 };
 
-export default async function RecommendationsPage({ searchParams }: RecommendationsPageProps) {
-  const { view, version } = await searchParams;
-  const pastResult = findPastResult(version);
-  const showingHistory = view === "history" || version !== undefined;
-  const result = showingHistory ? pastResult : CURRENT_RESULT;
-  const tabs = [
-    { label: "Current", href: "/recommendations", icon: Compass, active: !showingHistory },
-    { label: "History", href: "/recommendations?view=history", icon: Clock3, active: showingHistory },
-  ];
+export default function RecommendationsPage({ searchParams }: RecommendationsPageProps) {
   return (
     <>
       <Link href="/" className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[#164334] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4">
@@ -37,6 +30,24 @@ export default async function RecommendationsPage({ searchParams }: Recommendati
         </p>
       </header>
 
+      <Suspense fallback={<p className="mt-8 text-sm text-[#52645a]">Loading recommendations…</p>}>
+        <RecommendationResults searchParams={searchParams} />
+      </Suspense>
+    </>
+  );
+}
+
+async function RecommendationResults({ searchParams }: RecommendationsPageProps) {
+  const { view, version } = await searchParams;
+  const pastResult = findPastResult(version);
+  const showingHistory = view === "history" || version !== undefined;
+  const result = showingHistory ? pastResult : CURRENT_RESULT;
+  const tabs = [
+    { label: "Current", href: "/recommendations", icon: Compass, active: !showingHistory },
+    { label: "History", href: "/recommendations?view=history", icon: Clock3, active: showingHistory },
+  ];
+  return (
+    <>
       <nav aria-label="Recommendation views" className="mt-6 grid grid-cols-2 gap-1 rounded-2xl border border-[#dce3d9] bg-white p-1">
         {tabs.map(({ label, href, icon: Icon, active }) => (
           <Link
