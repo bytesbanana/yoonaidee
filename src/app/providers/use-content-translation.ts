@@ -7,6 +7,8 @@ import { maxTranslationCharacters, maxTranslationItems } from "@/lib/translation
 import { useLiff } from "./LiffProvider";
 import { useLanguage } from "./language-provider";
 
+export const contentTranslationQueryKey = "content-translations";
+
 export function useContentTranslation(texts: (string | null | undefined)[]) {
   const { language, t } = useLanguage();
   const { liffObject } = useLiff();
@@ -16,7 +18,7 @@ export function useContentTranslation(texts: (string | null | undefined)[]) {
     return language === "en" ? /\p{Script=Thai}/u.test(text) : /\p{Script=Latin}/u.test(text);
   }).sort();
   const query = useQuery({
-    queryKey: ["content-translations", language, candidates],
+    queryKey: [contentTranslationQueryKey, language, candidates],
     enabled: candidates.length > 0 && Boolean(liffObject?.isLoggedIn()),
     staleTime: Infinity,
     retry: false,
@@ -59,8 +61,6 @@ export function useContentTranslation(texts: (string | null | undefined)[]) {
 
   return {
     localize: (text: string) => query.data?.get(text.trim()) ?? translateContentLabel(language, text),
-    status: query.isFetching ? t("Translating…")
-      : query.isError ? t("Translation unavailable. Showing original text.")
-        : "",
+    status: query.isError ? t("Translation unavailable. Showing original text.") : "",
   };
 }

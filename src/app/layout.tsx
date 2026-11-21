@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { siteDescription } from "@/lib/i18n";
 import { LanguageProvider } from "./providers/language-provider";
 import { LiffProvider } from "./providers/LiffProvider";
+import { TranslationLoading } from "./providers/translation-loading";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <LanguageProvider>
           <LiffProvider>
-            <QueryProvider>{children}</QueryProvider>
+            <QueryProvider>
+              <TranslationLoading>{children}</TranslationLoading>
+            </QueryProvider>
           </LiffProvider>
         </LanguageProvider>
       </body>

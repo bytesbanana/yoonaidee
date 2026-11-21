@@ -70,7 +70,7 @@ function AnalysisResults({ analysis, localize }: {
                   pathname: `/recommendations/${encodeURIComponent(zone.zoneId)}`,
                   query: { result: analysis.id },
                 }} aria-label={t("View information for {zone}", { zone: localize(zone.zoneName) })} className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-[#c8d9cb] px-3 text-sm font-semibold text-[#164334] hover:bg-[#eaf1e6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#164334]">
-                  {t("View information")}
+                  {t(pageTitles.zone)}
                 </Link>
               </div>
             </li>

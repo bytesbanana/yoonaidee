@@ -1,8 +1,8 @@
 export type Language = "en" | "th";
 
 export const pageTitles = {
-  recommendations: "Your next stay",
-  zone: "Zone analysis",
+  recommendations: "Your Next Stay",
+  zone: "View information",
   profile: "Your profile",
   settings: "Housing preferences",
 } as const;
@@ -19,10 +19,9 @@ const thai: Record<string, string> = {
   "Yoo Nai Dee": "อยู่ไหนดี",
   [pageTitles.recommendations]: "ที่พักถัดไปของคุณ",
   "Your profile": "โปรไฟล์ของคุณ",
-  "Zone analysis": "วิเคราะห์ย่าน",
   "Housing preferences": "ความต้องการด้านที่อยู่อาศัย",
   "Loading recommendations…": "กำลังโหลดคำแนะนำ…",
-  "Loading zone analysis…": "กำลังโหลดผลวิเคราะห์ย่าน…",
+  "Loading zone information…": "กำลังโหลดข้อมูลย่าน…",
   "Loading your profile…": "กำลังโหลดโปรไฟล์…",
   "Loading your preferences…": "กำลังโหลดความต้องการด้านที่อยู่อาศัย…",
   "Open this page from LINE to access your analysis.": "เปิดหน้านี้จาก LINE เพื่อดูผลวิเคราะห์ของคุณ",
@@ -37,9 +36,10 @@ const thai: Record<string, string> = {
   "Start a search in the Yoo Nai Dee LINE chat. Your recommendations will appear here when the search is complete.": "เริ่มค้นหาในแชท LINE ของอยู่ไหนดี เมื่อค้นหาเสร็จ คำแนะนำจะแสดงที่นี่",
   "This analysis has no recommended zones.": "ผลวิเคราะห์นี้ไม่มีย่านแนะนำ",
   "Score {score}": "คะแนน {score}",
-  "View information": "ดูข้อมูล",
+  [pageTitles.zone]: "ดูข้อมูล",
   "View information for {zone}": "ดูข้อมูลย่าน {zone}",
   "Back to recommendations": "กลับไปที่คำแนะนำ",
+  "Return to Your Next Stay": "กลับไปที่ที่พักถัดไปของคุณ",
   "This zone is unavailable in the saved analysis.": "ไม่พบย่านนี้ในผลวิเคราะห์ที่บันทึกไว้",
   "Commute": "การเดินทาง",
   "{minutes} min": "{minutes} นาที",
@@ -50,7 +50,6 @@ const thai: Record<string, string> = {
   "Nearby places": "สถานที่ใกล้เคียง",
   "Sources": "แหล่งข้อมูล",
   "Rank {rank}": "อันดับ {rank}",
-  "Bangkok illustration": "ภาพประกอบกรุงเทพฯ",
   "Profile Details": "รายละเอียดโปรไฟล์",
   "LINE Display Name": "ชื่อที่แสดงใน LINE",
   "Destination": "จุดหมายปลายทาง",
