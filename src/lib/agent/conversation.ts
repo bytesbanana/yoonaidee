@@ -226,9 +226,9 @@ export async function processConversation(input: {
     if (saved.success && input.previousQuestion === questions[saved.data.language].confirmSearch) {
       const copy = questions[saved.data.language];
       if (editCommand.test(message)) {
-        return { profile: saved.data, ready: false, question: copy.editPreferences, reply: copy.editPreferences };
+        return { profile: saved.data, ready: false, question: copy.editPreferences, reply: copy.editPreferences, suggestions: undefined };
       }
-      return { profile: saved.data, ready: true, question: null, reply: copy.ready };
+      return { profile: saved.data, ready: true, question: null, reply: copy.ready, suggestions: undefined };
     }
   }
 
