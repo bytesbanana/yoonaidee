@@ -5,6 +5,8 @@
 
 **Implemented intake:** The Next.js webhook verifies LINE events, reads the active PostgreSQL profile by verified LINE `userId`, and runs Codex intake inline. When a one-on-one text message reaches Codex intake, the webhook requests LINE’s native loading indicator for up to 10 seconds. Missing destination, monthly rent ceiling, or transport gets a direct text reply and no job. The transport question includes an optional lifestyle invitation if no lifestyle preference is known; lifestyle does not gate analysis. Once all three are known, the bot asks for confirmation. Only an explicit confirmation of that prompt queues an `ANALYSIS` job and, after commit, triggers a Thai `SEARCHING` Flex push message with a button that opens the LINE Mini App. While an analysis is active, intake silently ignores new messages for that user. See [current intake flow](docs/line-codex-current-flow.svg). The diagrams and queue names below describe the older planned architecture, not current intake. The separate analysis worker is still required to consume the jobs and deliver results.
 
+The webhook saves the display name returned by LINE in `users.display_name` alongside the LINE user ID. A failed profile lookup preserves the last saved name. When a settings save creates a session, it also saves the display name if LINE provides it during authentication.
+
 ## 1. High-level design
 
 ```mermaid

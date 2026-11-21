@@ -14,6 +14,25 @@ export const textEvent = z.object({
 
 type IntakeOutcome = { reply?: IntakeLineMessage; jobId?: string };
 
+const lineProfile = z.object({ displayName: z.string().min(1) });
+
+async function getDisplayName(userId: string, eventId: string) {
+  const channelToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelToken) return null;
+  try {
+    const response = await fetch(`https://api.line.me/v2/bot/profile/${encodeURIComponent(userId)}`, {
+      headers: { Authorization: `Bearer ${channelToken}` },
+      signal: AbortSignal.timeout(1000),
+      cache: "no-store",
+    });
+    if (response.ok) return lineProfile.parse(await response.json()).displayName;
+    console.warn("line.profile.failed", { eventId, httpStatus: response.status });
+  } catch {
+    console.warn("line.profile.failed", { eventId });
+  }
+  return null;
+}
+
 async function showLoading(chatId: string, eventId: string) {
   const channelToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!channelToken) return;
@@ -59,14 +78,17 @@ export async function handleTextEvent(event: z.infer<typeof textEvent>): Promise
     return outcome;
   };
 
+  const displayName = await getDisplayName(event.source.userId, eventId);
   mark("db.begin");
   return intakeTransaction(async (client) => {
     mark("db.upsert_user");
     // Serialize intake for this LINE user, including concurrent sessions/events.
     const { rows: [user] } = await client.query<{ id: string }>(
-      `INSERT INTO users (line_user_id) VALUES ($1)
-       ON CONFLICT (line_user_id) DO UPDATE SET updated_at = now() RETURNING id`,
-      [event.source.userId],
+      `INSERT INTO users (line_user_id, display_name) VALUES ($1, $2)
+       ON CONFLICT (line_user_id) DO UPDATE
+       SET display_name = COALESCE(EXCLUDED.display_name, users.display_name), updated_at = now()
+       RETURNING id`,
+      [event.source.userId, displayName],
     );
     mark("db.load_session");
     await client.query(

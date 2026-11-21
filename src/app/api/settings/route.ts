@@ -3,9 +3,9 @@ import { z } from "zod";
 import { categoryId, categoryKey, maxPreferenceCategories, preferenceCategories, preferencePlaces } from "@/lib/preferences/categories";
 import { normalizeCategoryLocations } from "@/lib/preferences/locations";
 
-const verifiedToken = z.object({ sub: z.string().min(1) });
+const verifiedToken = z.object({ sub: z.string().min(1), name: z.string().min(1).optional() });
 const verifiedAccessToken = z.object({ client_id: z.string(), expires_in: z.number() });
-const lineProfile = z.object({ userId: z.string().min(1) });
+const lineProfile = z.object({ userId: z.string().min(1), displayName: z.string().min(1).optional() });
 const storedProfile = z.object({
   categories: preferenceCategories.optional(),
   budget: z.object({ maxMonthlyRent: z.number().positive().nullable() }).optional(),
@@ -68,7 +68,7 @@ async function authenticate(request: Request) {
     });
     if (profile.status === 401 || profile.status === 403) return unauthorized();
     if (!profile.ok) throw new Error("LINE profile unavailable");
-    return lineProfile.parse(await profile.json()).userId;
+    return lineProfile.parse(await profile.json());
   }
 
   const verification = await fetch(verifyUrl, {
@@ -78,7 +78,8 @@ async function authenticate(request: Request) {
   });
   if (verification.status === 400 || verification.status === 401) return unauthorized();
   if (!verification.ok) throw new Error("LINE verification unavailable");
-  return verifiedToken.parse(await verification.json()).sub;
+  const { sub, name } = verifiedToken.parse(await verification.json());
+  return { userId: sub, displayName: name };
 }
 
 async function readSession(lineUserId: string) {
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
   try {
     const user = await authenticate(request);
     if (user instanceof Response) return user;
-    const session = await readSession(user);
+    const session = await readSession(user.userId);
     if (!session) return json({ settings: null });
 
     const data = storedProfile.parse(session.preferences);
@@ -140,19 +141,25 @@ export async function PATCH(request: Request) {
       return json({ error: "Each category can only be added once." }, 400);
     }
 
-    const session = await readSession(user);
+    const session = await readSession(user.userId);
     const conflict = () => json({ error: "Your saved priorities changed. Reload them before saving again." }, 409);
     if (!session) {
       if (sessionId !== null || version !== null) return conflict();
       const created = await intakeTransaction(async (client) => {
-        await client.query("INSERT INTO users (line_user_id) VALUES ($1) ON CONFLICT DO NOTHING", [user]);
+        await client.query(
+          `INSERT INTO users (line_user_id, display_name) VALUES ($1, $2)
+           ON CONFLICT (line_user_id) DO UPDATE
+           SET display_name = EXCLUDED.display_name, updated_at = now()
+           WHERE EXCLUDED.display_name IS NOT NULL AND users.display_name IS DISTINCT FROM EXCLUDED.display_name`,
+          [user.userId, user.displayName ?? null],
+        );
         const categories = weights.map((item) => ({ ...item, places: normalizeCategoryLocations(item.places ?? []) }));
         const { rows: [inserted] } = await client.query<Session>(
           `INSERT INTO conversation_sessions (user_id, preferences, profile_version)
            SELECT id, $2::jsonb, 1 FROM users WHERE line_user_id = $1
            ON CONFLICT (user_id) WHERE closed_at IS NULL DO NOTHING
            RETURNING id, profile_version, preferences`,
-          [user, JSON.stringify({ categories })],
+          [user.userId, JSON.stringify({ categories })],
         );
         return inserted ? savedPriorities(inserted) : null;
       });
