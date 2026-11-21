@@ -65,6 +65,17 @@ export function StayPlanner() {
     setStorageError(written ? "" : "This browser couldn’t remove the search.");
   }
 
+  function clearSearches() {
+    if (!window.confirm("Clear all past searches saved in this browser?")) return;
+
+    const written = writeSearches([]);
+    setStorageError(written ? "" : "This browser couldn’t clear past searches.");
+    if (written) {
+      heading.current?.focus();
+      setAnnouncement("Past searches cleared.");
+    }
+  }
+
   return (
     <>
       <header className="mt-3 rounded-[2rem] bg-[#163a2f] p-6 text-[#faf8ed] sm:p-9">
@@ -96,18 +107,26 @@ export function StayPlanner() {
               <Link href={plannerPath} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#164334] underline underline-offset-4">Plan a stay <ArrowRight aria-hidden="true" className="size-4" /></Link>
             </div>
           ) : (
-            <ul className="space-y-3">
-              {searches.map((item) => (
-                <li key={item.id} className="flex flex-wrap items-center justify-between gap-x-4 rounded-2xl border border-[#dce3d9] bg-white p-4">
-                  <Link href={searchHref(item.id)} className="min-w-0 flex-1 py-1 hover:underline">
-                    <p className="break-words font-semibold">{item.destination}</p>
-                    <p className="mt-1 text-sm text-[#52645a]">{formatStayDate(item.moveIn)} – {formatStayDate(item.moveOut)} · {formatBaht(item.budget)}</p>
-                  </Link>
-                  <button type="button" onClick={() => removeSearch(item.id)} aria-label={`Remove search for ${item.destination}, ${formatStayDate(item.moveIn)}`}
-                    className="min-h-11 px-1 text-sm text-[#52645a] underline underline-offset-4">Remove</button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <div className="mb-2 flex justify-end">
+                <button type="button" onClick={clearSearches}
+                  className="min-h-11 px-2 text-sm font-semibold text-[#164334] underline underline-offset-4">
+                  Clear past searches
+                </button>
+              </div>
+              <ul className="space-y-3">
+                {searches.map((item) => (
+                  <li key={item.id} className="flex flex-wrap items-center justify-between gap-x-4 rounded-2xl border border-[#dce3d9] bg-white p-4">
+                    <Link href={searchHref(item.id)} className="min-w-0 flex-1 py-1 hover:underline">
+                      <p className="break-words font-semibold">{item.destination}</p>
+                      <p className="mt-1 text-sm text-[#52645a]">{formatStayDate(item.moveIn)} – {formatStayDate(item.moveOut)} · {formatBaht(item.budget)}</p>
+                    </Link>
+                    <button type="button" onClick={() => removeSearch(item.id)} aria-label={`Remove search for ${item.destination}, ${formatStayDate(item.moveIn)}`}
+                      className="min-h-11 px-1 text-sm text-[#52645a] underline underline-offset-4">Remove</button>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </section>
       ) : search && editingId !== search.id ? (
