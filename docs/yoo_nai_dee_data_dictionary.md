@@ -89,7 +89,7 @@ erDiagram
 | `session_id` | uuid | NO | — | FK to conversation session |
 | `message_id` | uuid | YES | — | Optional originating conversation message FK |
 | `job_type` | text | NO | — | `CONVERSATION` or `ANALYSIS` |
-| `status` | text | NO | `QUEUED` | `QUEUED`, `PROCESSING`, `COLLECTING`, `SCORING`, `EXPLAINING`, `NEEDS_INPUT`, `COMPLETED`, `FAILED` |
+| `status` | text | NO | `QUEUED` | `QUEUED`, `PROCESSING`, `COLLECTING`, `SCORING`, `EXPLAINING`, `NEEDS_INPUT`, `WAITING_FOR_HANDLER`, `COMPLETED`, `FAILED` |
 | `idempotency_key` | text | NO | — | Globally unique logical-job key |
 | `profile_version` | integer | YES | — | Snapshot version (mainly `ANALYSIS`) |
 | `input_snapshot` | jsonb object | NO | `{}` | Immutable job payload / user profile snapshot |
@@ -105,7 +105,19 @@ erDiagram
 | `updated_at` | timestamptz | NO | `now()` | Last status mutation |
 | `completed_at` | timestamptz | YES | — | When committed complete |
 
-**Constraints/indexes:** UNIQUE `idempotency_key`; CHECK `attempts <= max_attempts`; ready/failed partial index `(run_after, created_at)`, running/lease partial index, session recent index. `FAILED` retry only when `attempts < max_attempts`; `NEEDS_INPUT` parked until conversation produces new job. Worker checks lock ownership on completion.
+**Constraints/indexes:** UNIQUE `idempotency_key`; CHECK `attempts <= max_attempts`; ready/failed partial index `(run_after, created_at)`, running/lease partial index, session recent index. `FAILED` retries only when `attempts < max_attempts` and `run_after <= now()`; at the limit it is terminal. `NEEDS_INPUT` and `WAITING_FOR_HANDLER` are parked and never automatically claimed. The Java consumer owns only `ANALYSIS` jobs: it claims with a 60-second lease and commits before the OpenAI connectivity request. On exact `OK`, it atomically parks the still-owned job and queues one acknowledgement, clearing the lease and restoring the claim's attempt. OpenAI failure creates no success acknowledgement. Expired leased `ANALYSIS` jobs become `FAILED` under a row lock; a retry is delayed by `min(300, 5 * 2^(attempts-1))` seconds. The research handler will need lease renewal if its processing can exceed 60 seconds.
+
+The OpenAI request has a 45-second timeout. The acknowledgement uses `analysis-ack:{jobId}` and the text “ได้รับคำขอวิเคราะห์แล้ว ตอนนี้ระบบยังไม่เริ่มวิเคราะห์”. `input_snapshot` and `profile_version` stay unchanged. Apply `docs/migrations/20261121_analysis_acknowledged.sql` to existing databases after the waiting-for-handler migration.
+
+When the research handler is ready, deploy it and explicitly release parked jobs:
+
+```sql
+UPDATE analysis_jobs
+SET status = 'QUEUED', run_after = now(), updated_at = now()
+WHERE job_type = 'ANALYSIS' AND status = 'WAITING_FOR_HANDLER';
+```
+
+The handler must replace the park step before running this SQL; otherwise the consumer will park the jobs again. `input_snapshot` and `profile_version` stay unchanged. Apply `docs/migrations/20261121_analysis_waiting_for_handler.sql` once to existing databases before starting this consumer.
 
 ### `zones` — Master candidate residential neighborhoods
 
@@ -196,7 +208,7 @@ erDiagram
 | `session_id` | uuid | NO | — | Origin session FK |
 | `analysis_result_id` | uuid | YES | — | Optional result FK; required for completed analysis |
 | `idempotency_key` | text | NO | — | Prevent duplicate notification intents |
-| `notification_type` | text | NO | — | `CONVERSATION_MESSAGE`, `ANALYSIS_COMPLETED`, `ANALYSIS_FAILED` |
+| `notification_type` | text | NO | — | `CONVERSATION_MESSAGE`, `ANALYSIS_ACKNOWLEDGED`, `ANALYSIS_COMPLETED`, `ANALYSIS_FAILED` |
 | `status` | text | NO | `PENDING` | `PENDING`, `PROCESSING`, `SENT`, `FAILED` |
 | `payload` | jsonb object | NO | `{}` | LINE Push preview/text/link only; no full result |
 | `attempts` | integer | NO | `0` | Attempts |

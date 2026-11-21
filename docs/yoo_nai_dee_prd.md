@@ -138,7 +138,7 @@ Offer a read-only, trustworthy result experience. LINE communicates briefly; LIF
 
 ## 2.3 LIFF Screens (MVP)
 
-1. **Progress:** `QUEUED`, `PROCESSING`, `COLLECTING`, `SCORING`, `EXPLAINING`, `NEEDS_INPUT`, `COMPLETED`, `FAILED` with progress percentage/stage where available.
+1. **Progress:** `QUEUED`, `PROCESSING`, `COLLECTING`, `SCORING`, `EXPLAINING`, `NEEDS_INPUT`, `WAITING_FOR_HANDLER`, `COMPLETED`, `FAILED` with progress percentage/stage where available.
 2. **Top 3 zone overview:** Zone names, scores, confidence (separate from scores), rationale, key pros/cons and trade-offs.
 3. **Zone details:** Map/geographic context, available POIs, commuting evidence and limitations, ranked rental listings with real price, source link, image (only where rights permit), and fetch/update timestamps.
 4. **Empty/partial data:** Explicit gaps (e.g. missing transit estimate, no listings within budget), no fabricated listing cards.
@@ -248,10 +248,13 @@ Example cache TTLs proposed in context (not provider guarantees): POI 7 days, ro
 | `SCORING` | Deterministic ranking |
 | `EXPLAINING` | AI writing explanation |
 | `NEEDS_INPUT` | Parked; clarify with user and later enqueue a fresh analysis job |
+| `WAITING_FOR_HANDLER` | `ANALYSIS` job parked by the Java queue consumer until research is implemented; no attempt spent |
 | `COMPLETED` | Full result committed to DB |
 | `FAILED` | Error; retryable while `attempts < max_attempts`, otherwise terminal |
 
 Progress state stored in `analysis_jobs`; LIFF polls DB through API. Retry uses `run_after`, `lease_until`, `locked_by`, `attempts`, `max_attempts` and `last_error`. Acquire/renew a lease while running; recover expired leases. Deduplicate job creation by `idempotency_key`. Serialize conversation jobs per session.
+
+**Current implementation phase:** From an already seeded `ANALYSIS` job, the Java worker claims and commits, calls OpenAI for exact `OK` without sending the profile, then atomically parks the owned job in `WAITING_FOR_HANDLER` and queues an `ANALYSIS_ACKNOWLEDGED` LINE message. Failure uses the job's retry rules and queues no success acknowledgement. The intake worker delivers the outbox row via LINE Push. No research, results, session changes, or completed ANALYSIS jobs are produced. Conversation does not yet enqueue ANALYSIS jobs. The full Stage 2 workflow above is planned. Once the handler replaces the park step, reset parked jobs to `QUEUED` using the SQL in the data dictionary.
 
 ## 3.6 Acceptance criteria
 

@@ -129,13 +129,18 @@ async function deliverIntakeMessage() {
       SELECT n.id, n.attempts, n.max_attempts, n.payload, u.line_user_id,
              split_part(n.idempotency_key, ':', 2) AS job_id
       FROM notification_outbox n JOIN users u ON u.id = n.user_id
-      WHERE n.notification_type = 'CONVERSATION_MESSAGE' AND n.status = 'PENDING'
-        AND (n.idempotency_key LIKE 'intake:%' OR n.idempotency_key LIKE 'intake-failure:%')
+      WHERE n.status = 'PENDING'
+        AND ((n.notification_type = 'CONVERSATION_MESSAGE'
+              AND (n.idempotency_key LIKE 'intake:%' OR n.idempotency_key LIKE 'intake-failure:%'))
+          OR (n.notification_type = 'ANALYSIS_ACKNOWLEDGED'
+              AND n.idempotency_key LIKE 'analysis-ack:%'))
         AND n.next_attempt_at <= now()
         AND NOT EXISTS (
           SELECT 1 FROM notification_outbox earlier WHERE earlier.session_id = n.session_id
             AND earlier.status = 'PENDING'
-            AND (earlier.idempotency_key LIKE 'intake:%' OR earlier.idempotency_key LIKE 'intake-failure:%')
+            AND (earlier.idempotency_key LIKE 'intake:%'
+              OR earlier.idempotency_key LIKE 'intake-failure:%'
+              OR earlier.idempotency_key LIKE 'analysis-ack:%')
             AND (earlier.created_at, earlier.id) < (n.created_at, n.id)
         )
       ORDER BY n.created_at, n.id LIMIT 1 FOR UPDATE OF n SKIP LOCKED
@@ -167,7 +172,7 @@ async function deliverIntakeMessage() {
       `UPDATE notification_outbox SET status = $2, attempts = attempts + 1,
           updated_at = now(), next_attempt_at = now() + interval '10 seconds',
           sent_at = CASE WHEN $2 = 'SENT' THEN now() END,
-          last_error = CASE WHEN $2 <> 'SENT' THEN 'LINE intake push failed' END
+          last_error = CASE WHEN $2 <> 'SENT' THEN 'LINE push failed' END
        WHERE id = $1`,
       [notification.id, status],
     );
