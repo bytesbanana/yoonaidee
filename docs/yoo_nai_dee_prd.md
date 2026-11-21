@@ -301,7 +301,7 @@ Progress state stored in `analysis_jobs`; LIFF polls DB through API. Retry uses 
 
 ### Direct webhook reply test
 
-The webhook currently uses direct reply mode. It verifies LINE's signature and acknowledges one-to-one text messages with a Flex card via the LINE Reply API, using the event's reply token. This mode pauses profile intake and queue creation for new messages.
+The webhook currently uses direct reply mode. It verifies LINE's signature and acknowledges one-to-one text messages with a plain text message via the LINE Reply API, using the event's reply token. This mode pauses profile intake and queue creation for new messages.
 
 Set both `LINE_CHANNEL_SECRET` and `LINE_CHANNEL_ACCESS_TOKEN` on the Railway **web** service. Keep the webhook URL at `/api/line/webhook`. An empty verification batch returns HTTP 200. Send a message in a one-to-one OA chat and look for `line.reply.accepted` in the web service logs. A rejected LINE API call logs `line.reply.failed` with its HTTP status.
 

@@ -1,6 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { buildIntakeFlex } from "@/lib/line/intake-flex";
 
 const replyEvent = z.object({
   type: z.literal("message"),
@@ -21,7 +20,7 @@ async function replyToMessage(event: z.infer<typeof replyEvent>, channelToken: s
       headers: { Authorization: `Bearer ${channelToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         replyToken: event.replyToken,
-        messages: [buildIntakeFlex({ reply, language, needsClarification: false })],
+        messages: [{ type: "text", text: reply }],
       }),
       signal: AbortSignal.timeout(5000),
     });
