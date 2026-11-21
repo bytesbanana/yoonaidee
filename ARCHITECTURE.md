@@ -8,6 +8,8 @@
 The webhook saves the display name returned by LINE in `users.display_name` alongside the LINE user ID. A failed profile lookup preserves the last saved name. When a settings save creates a session, it also saves the display name if LINE provides it during authentication.
 Codex returns intake answer suggestions alongside profile extraction. The app selects only suggestions for the question it actually asks, with localized transport options as fallback. Search confirmation uses a fixed localized command. `src/lib/line/quick-reply.ts` builds LINE message actions; taps follow the existing text webhook path. Suggestions are not persisted.
 
+The `/profile` page shows a full-screen loading indicator during navigation and while LINE and saved preferences load. The page then shows the profile, a sign-in prompt, or an error message.
+
 ## 1. High-level design
 
 ```mermaid

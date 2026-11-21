@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ProfileLoading from "../profile/loading";
 import { ProfileView } from "../profile/profile-view";
 import { useLiff } from "../providers/LiffProvider";
 import { hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
@@ -91,11 +92,12 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
   ];
   const signIn = () => liffObject?.login({ redirectUri: window.location.href });
   if (showProfile) {
+    if (!liffError && view.status === "loading") return <ProfileLoading />;
+
     const message = liffError ? "Open this page from LINE to load your saved priorities."
-      : view.status === "loading" ? "Loading your saved priorities…"
-        : view.status === "error" ? view.message
-          : view.status === "sign-in" ? "Sign in to see your saved priorities."
-            : undefined;
+      : view.status === "error" ? view.message
+        : view.status === "sign-in" ? "Sign in to see your saved priorities."
+          : undefined;
     return (
       <ProfileView
         profile={profile}
