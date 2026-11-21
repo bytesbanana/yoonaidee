@@ -1,6 +1,6 @@
 # PRD — Yoo Nai Dee (อยู่ไหนดี)
 
-**Status:** Initial hackathon MVP · **Platform:** LINE OA + LIFF · **Stack:** Next.js, Node.js, TypeScript, Docker Compose
+**Status:** Initial hackathon MVP · **Platform:** LINE OA + LIFF · **Stack:** Next.js, Node.js, TypeScript (Docker Compose planned)
 
 ## 1. Problem
 
@@ -127,4 +127,4 @@ Parallel work begins immediately after agreeing on shared schema, fixture and en
 - **External rental feeds:** Not guaranteed; defer listings unless rights/availability are verified.
 - **Travel times:** Do not claim true BTS/MRT times from driving-route APIs.
 - **OpenAI model/limits:** Configure via environment variable; have local mock results.
-- **Deployment:** Docker Compose in this repo — `web` (Next.js) + `db` (PostgreSQL). The job worker is a separate repo sharing the same database. No cloud PaaS dependency.
+- **Deployment:** Not decided yet. Plan: Docker Compose (`web` + `db`) in this repo, job worker in a separate repo sharing the same database.

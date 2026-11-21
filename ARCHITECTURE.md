@@ -1,7 +1,7 @@
 # ARCHITECTURE — Hackathon MVP
 
-**Principle:** One Next.js/Node.js codebase, one Docker Compose stack, one PostgreSQL database, one prepared neighborhood dataset. Keep the LINE webhook fast and the AI path replaceable by a mock.
-**Deployment:** `docker compose up` runs two services — `web` (Next.js) and `db` (PostgreSQL). The **job worker lives in a separate repo** and connects to the same Postgres (`DATABASE_URL`); it is not part of this repo's compose stack.
+**Principle:** One Next.js/Node.js codebase, one PostgreSQL database, one prepared neighborhood dataset. Keep the LINE webhook fast and the AI path replaceable by a mock.
+**Deployment:** not settled yet — plan is Docker Compose (`web` + `db`) with the **job worker in a separate repo** sharing the same `DATABASE_URL`. Until the app scaffold lands, run Next.js and Postgres however is fastest locally.
 
 ## 1. High-level design
 
@@ -32,38 +32,21 @@ Two logical AI stages, **not** two services or a complicated multi-agent framewo
 | Concern | Choice |
 | --- | --- |
 | UI + API | Next.js App Router + TypeScript |
-| Runtime | Docker Compose: `web` (Next.js) + `db` (PostgreSQL); worker runs from a separate repo |
+| Runtime | Node.js (Next.js server + separate worker repo); Docker Compose planned |
 | Styling | Tailwind CSS; shadcn/ui only if useful |
 | AI | OpenAI API, tool calling, structured output |
 | Validation | Zod at external/system boundaries |
-| Persistence + queue | PostgreSQL 16 in Compose, Drizzle ORM |
+| Persistence + queue | PostgreSQL 16, Drizzle ORM |
 | LINE | Messaging API Webhook, Push, Flex and optional LIFF |
 | Source data | Versioned `data/neighborhoods.json` snapshot |
 | Maps, rental provider | Optional stretch integrations, not blockers |
 
-**Why Docker Compose instead of Vercel background tasks?** Serverless request lifetimes make a reliable polling worker a bad fit. Compose gives us a long-lived `web` process plus a managed Postgres with zero PaaS account setup — one command, one repo, runs on any Docker host. **Where does the worker live?** In a separate repo, deployed on its own (same Docker host or anywhere reachable). It shares only the database, so this repo never depends on the worker being up — the webhook enqueues, the worker picks up.
+**Why a persistent Node process?** Serverless request lifetimes make a reliable polling worker a bad fit, so the worker needs a long-lived process — deployed separately from this repo.
 
-### Docker Compose services (this repo)
-```mermaid
-flowchart LR
-    subgraph stack["docker compose (this repo)"]
-        W["web<br/>next start"]
-        D[("db<br/>postgres:16")]
-        W -->|DATABASE_URL| D
-    end
-    L[LINE] --> W
-    W --> L
-    K["worker<br/>(separate repo)"] -->|DATABASE_URL| D
-    K --> L
-```
-| Service | Command | Ports | Notes |
-| --- | --- | --- | --- |
-| `db` | `postgres:16` | `5432` (internal) | volume `pgdata`; healthcheck gates `web` startup |
-| `web` | `npm run start` (Next.js production server) | `3000:3000` | public target behind any host proxy |
-
-The `worker` service is **not** in this compose file — it lives in another repo and points at the same `DATABASE_URL` (host `db` when co-located, or the published host/port when remote). Publish `5432` only when the worker runs on a different host.
-
-Rules: never bake secrets into the image — pass everything via `.env` / the compose environment section. `db` is not published to the host by default.
+### Deployment (planned, not built yet)
+- **This repo:** Next.js web app + PostgreSQL, wrapped in a `docker-compose.yml` (`web` + `db`) when we start building.
+- **Worker:** separate repo, separate deploy, same `DATABASE_URL`.
+- **Local before that:** any Postgres + `npm run dev` is fine. Don't spend time on infra yet.
 
 ## 3. Request/worker sequence
 
@@ -123,9 +106,6 @@ src/
   types/recommendation.ts
   fixtures/recommendation.mock.json
 data/neighborhoods.json
-docker-compose.yml
-Dockerfile
-.env.example
 AGENTS.md
 PRD.md
 ARCHITECTURE.md
@@ -216,7 +196,7 @@ MOCK_AGENT=false
 
 Never put server secrets in `NEXT_PUBLIC_*` variables.
 
-Compose wiring: `db` gets `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`; `web` gets `DATABASE_URL=postgresql://app:app@db:5432/app` (host `db`, not `localhost`). Copy `.env.example` → `.env` for local runs; `docker compose up` reads it automatically. The worker repo uses the **same** `DATABASE_URL` value (host `db` when co-located on the same Docker network, otherwise the published host/port).
+Env wiring: `DATABASE_URL` points at the local Postgres for development (`postgresql://app:app@localhost:5432/app`). Copy `.env.example` → `.env` and fill in real values. Never put server secrets in `NEXT_PUBLIC_*` variables.
 
 ## 10. Integration order
 
@@ -227,4 +207,4 @@ Compose wiring: `db` gets `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`;
 5. Add scoring/validation, a results page and progress if time remains.
 6. Run a full live rehearsal and keep a mock fallback ready.
 
-**Deployment dependency:** `docker compose up` starts `db` and `web`; `web` waits for the `db` healthcheck. Deploying to a real host = same compose file, real `.env` values, and a reverse proxy (Caddy/nginx) publishing `web`'s port 3000 with a public HTTPS URL for the LINE webhook. The worker repo is deployed separately and only needs reachable Postgres.
+**Deployment dependency (not settled):** the demo needs a public HTTPS URL for the LINE webhook and a reachable Postgres for both this repo and the worker repo. Docker Compose is the plan; details get decided when the scaffold starts.

@@ -11,7 +11,7 @@
 
 ## Read in this order
 1. **[PRD.md](./PRD.md)** — What the product must do, MVP scope, user journey, acceptance criteria, shared result contract, team ownership.
-2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** — How the Next.js/Node.js/LINE/OpenAI/PostgreSQL/Docker Compose pieces connect, job flow, tool boundaries, deployment.
+2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** — How the Next.js/Node.js/LINE/OpenAI/PostgreSQL pieces connect, job flow, tool boundaries, deployment plan.
 3. **[SCHEMA.md](./SCHEMA.md)** — Database tables, columns, indexes, and job/queue semantics.
 4. **[CODING_STANDARD.md](./CODING_STANDARD.md)** — How to code quickly for this hackathon: pragmatic DRY/SRP, no automated tests, manual smoke checks, error handling.
 
@@ -27,15 +27,11 @@
 ## Work allocation
 - **Dev A:** `src/components/**`, `src/app/results/**`, `src/lib/line/build-recommendation-flex.ts`
 - **Dev B:** `src/lib/agent/**`, `src/lib/scoring/**`
-- **Dev C:** `src/app/api/**`, `src/lib/db/**`, `src/lib/jobs/**` (enqueue side only), `src/lib/neighborhoods/**`, `docker-compose.yml`, `Dockerfile`
+- **Dev C:** `src/app/api/**`, `src/lib/db/**`, `src/lib/jobs/**` (enqueue side only), `src/lib/neighborhoods/**`
 - **Shared:** `src/types/recommendation.ts`, `src/lib/db/schema.ts`, mock JSON fixture, environment variable names — agree before editing.
 
 ## Running locally
-```bash
-cp .env.example .env
-docker compose up --build
-```
-`web` on http://localhost:3000, `db` on 5432 (optional host publish). The job worker lives in a **separate repo** and polls the same `jobs` table — this repo only enqueues. See `SCHEMA.md` for table definitions and `drizzle-kit` commands.
+Not scaffolded yet. When the app starts: `cp .env.example .env`, run a Postgres, `npm run dev`. Docker Compose (`web` + `db`) is the planned local setup — add it when the scaffold lands, not before. The job worker lives in a **separate repo** and polls the same `jobs` table; this repo only enqueues. See `SCHEMA.md` for table definitions.
 
 ## Recommended first task
 Implement a single vertical slice using mock JSON: receive a LINE webhook, enqueue/deliver a valid mock `RecommendationResult`, and render it through `buildRecommendationFlex`. Then replace mocks with real agent and data calls.
