@@ -296,3 +296,11 @@ Progress state stored in `analysis_jobs`; LIFF polls DB through API. Retry uses 
 10. Notification delivery fails -> independent retry without re-running research.
 
 **Associated files:** `yoo_nai_dee_data_dictionary.md`, `yoo_nai_dee_init.sql`.
+
+### Running the LINE intake locally
+
+The web app and intake worker use `docs/yoo_nai_dee_init.sql` as their shared schema. Apply it to your PostgreSQL database. Copy `.env.example` to `.env` and set `DATABASE_URL`, `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `OPENAI_API_KEY`, and `OPENAI_MODEL` (a Responses model that supports Structured Outputs).
+
+Run `npm run dev` and, in a separate process, `npm run intake:worker`. Set your LINE Messaging API webhook URL to your public HTTPS app URL plus `/api/line/webhook`. The worker consumes `CONVERSATION` jobs and sends its own outbox messages by LINE Push. The research worker can consume queued `ANALYSIS` rows using `input_snapshot.profile` and `input_snapshot.profileVersion`. It needs to be configured separately. A search-area destination anchors a search for someone who has no regular commute and should be treated accordingly by research.
+
+For a smoke check, send “อยากได้คอนโดใกล้ยิมกับตลาด ทำงานอโศก งบไม่เกิน 15,000 บาทต่อเดือน”. The bot should ask about transportation. Reply “BTS” and check that an `ANALYSIS` job contains the destination, rent ceiling, BTS preference, gym and market priorities, and condo preference. This intake uses the configured OpenAI model.
