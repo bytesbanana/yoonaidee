@@ -1,3 +1,5 @@
+import type { LineQuickReply } from "./quick-reply";
+
 type IntakeFlexInput = {
   reply: string;
   language: "th" | "en";
@@ -77,4 +79,4 @@ export function buildAnalysisQueuedFlex() {
 
 export type IntakeLineMessage = ReturnType<typeof buildIntakeFlex>
   | ReturnType<typeof buildAnalysisQueuedFlex>
-  | { type: "text"; text: string };
+  | { type: "text"; text: string; quickReply?: LineQuickReply };

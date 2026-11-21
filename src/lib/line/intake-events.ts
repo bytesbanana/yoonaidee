@@ -2,6 +2,7 @@ import { z } from "zod";
 import { processConversation } from "../agent/conversation";
 import { intakeTransaction } from "../db/intake-db";
 import { buildAnalysisQueuedFlex, type IntakeLineMessage } from "./intake-flex";
+import { buildQuickReply } from "./quick-reply";
 
 export const textEvent = z.object({
   type: z.literal("message"),
@@ -175,7 +176,10 @@ export async function handleTextEvent(event: z.infer<typeof textEvent>): Promise
        RETURNING s.profile_version, $3 AND (prior.changed OR NOT prior.was_ready) AS should_queue`,
       [session.id, result.profile, result.ready, { lastProcessedMessageId: message.id }, result.question],
     );
-    if (result.question) return finish({ reply: { type: "text", text: result.question } });
+    if (result.question) {
+      const quickReply = buildQuickReply(result.suggestions);
+      return finish({ reply: { type: "text", text: result.question, ...(quickReply ? { quickReply } : {}) } });
+    }
     if (!updated.should_queue) return finish({});
     return finish(await queueAnalysis(result.profile, updated.profile_version, `analysis:${session.id}:${updated.profile_version}`));
   }).catch((error: unknown) => {
