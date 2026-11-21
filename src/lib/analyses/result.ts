@@ -19,6 +19,8 @@ function validItems<T extends z.ZodType>(schema: T) {
   );
 }
 
+const sourceUrls = validItems(httpUrl).catch([]);
+
 const zone = z.object({
   zoneId: z.string().min(1),
   zoneName: z.string().min(1),
@@ -35,11 +37,13 @@ const zone = z.object({
   }).nullish(),
   nearbyPlaces: validItems(namedEvidence),
   properties: validItems(property),
+  sourceUrls,
 });
 
 export const resultSchema = z.object({
   recommendations: z.array(zone),
   dataLimitations: z.array(z.string()).default([]),
+  sourceUrls,
 });
 
 export type AnalysisResult = z.output<typeof resultSchema>;

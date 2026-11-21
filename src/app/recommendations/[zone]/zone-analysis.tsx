@@ -27,15 +27,19 @@ export function ZoneAnalysis() {
         const zones = analysis?.result.recommendations ?? [];
         const index = zones.findIndex(({ zoneId }) => zoneId === zone);
         const match = zones[index];
-        return match ? <ZoneDetails zone={match} index={index} localize={localize} /> : <p className="mt-4">{t("This zone is unavailable in the saved analysis.")}</p>;
+        if (!match) return <p className="mt-4">{t("This zone is unavailable in the saved analysis.")}</p>;
+
+        const sourceUrls = match.sourceUrls.length ? match.sourceUrls : analysis?.result.sourceUrls ?? [];
+        return <ZoneDetails zone={match} index={index} sourceUrls={sourceUrls} localize={localize} />;
       }}
     </AnalysisLoader>
   );
 }
 
-function ZoneDetails({ zone, index, localize }: {
+function ZoneDetails({ zone, index, sourceUrls, localize }: {
   zone: ZoneResult;
   index: number;
+  sourceUrls: string[];
   localize: (text: string) => string;
 }) {
   const { t } = useLanguage();
@@ -71,6 +75,20 @@ function ZoneDetails({ zone, index, localize }: {
         <DetailsList title={t("Advantages")} items={zone.pros.map(localize)} />
         <DetailsList title={t("Trade-offs")} items={zone.cons.map(localize)} />
         <DetailsList title={t("Nearby places")} items={zone.nearbyPlaces.map(({ name }) => localize(name))} />
+        {sourceUrls.length > 0 && (
+          <section>
+            <h2 className="font-semibold">{t("Sources")}</h2>
+            <ul className="mt-1 list-disc space-y-1 pl-5">
+              {Array.from(new Set(sourceUrls), (url) => (
+                <li key={url}>
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#164334] underline [overflow-wrap:anywhere]">
+                    {url}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </>
   );

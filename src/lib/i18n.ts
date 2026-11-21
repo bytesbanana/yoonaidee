@@ -1,7 +1,7 @@
 export type Language = "en" | "th";
 
 export const pageTitles = {
-  recommendations: "Your recommendations",
+  recommendations: "Your next stay",
   zone: "Zone analysis",
   profile: "Your profile",
   settings: "Housing preferences",
@@ -17,7 +17,7 @@ const thai: Record<string, string> = {
   "English": "อังกฤษ",
   "Thai": "ไทย",
   "Yoo Nai Dee": "อยู่ไหนดี",
-  "Your recommendations": "คำแนะนำสำหรับคุณ",
+  [pageTitles.recommendations]: "ที่พักถัดไปของคุณ",
   "Your profile": "โปรไฟล์ของคุณ",
   "Zone analysis": "วิเคราะห์ย่าน",
   "Housing preferences": "ความต้องการด้านที่อยู่อาศัย",
@@ -37,8 +37,8 @@ const thai: Record<string, string> = {
   "Start a search in the Yoo Nai Dee LINE chat. Your recommendations will appear here when the search is complete.": "เริ่มค้นหาในแชท LINE ของอยู่ไหนดี เมื่อค้นหาเสร็จ คำแนะนำจะแสดงที่นี่",
   "This analysis has no recommended zones.": "ผลวิเคราะห์นี้ไม่มีย่านแนะนำ",
   "Score {score}": "คะแนน {score}",
-  "View zone analysis": "ดูผลวิเคราะห์ย่าน",
-  "View zone analysis for {zone}": "ดูผลวิเคราะห์ย่าน {zone}",
+  "View information": "ดูข้อมูล",
+  "View information for {zone}": "ดูข้อมูลย่าน {zone}",
   "Back to recommendations": "กลับไปที่คำแนะนำ",
   "This zone is unavailable in the saved analysis.": "ไม่พบย่านนี้ในผลวิเคราะห์ที่บันทึกไว้",
   "Commute": "การเดินทาง",
@@ -48,6 +48,7 @@ const thai: Record<string, string> = {
   "Advantages": "ข้อดี",
   "Trade-offs": "ข้อควรพิจารณา",
   "Nearby places": "สถานที่ใกล้เคียง",
+  "Sources": "แหล่งข้อมูล",
   "Rank {rank}": "อันดับ {rank}",
   "Bangkok illustration": "ภาพประกอบกรุงเทพฯ",
   "Profile Details": "รายละเอียดโปรไฟล์",

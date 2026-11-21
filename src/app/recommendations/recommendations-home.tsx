@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 import type { SavedAnalysis } from "@/lib/analyses/result";
+import { pageTitles } from "@/lib/i18n";
 import { useLanguage } from "../providers/language-provider";
 import { AnalysisLoader } from "./analysis-loader";
 import { ZoneArtwork } from "./zone-artwork";
@@ -22,7 +23,7 @@ export function RecommendationsHome() {
         </Link>
       </div>
       <h1 className="mt-3 rounded-2xl bg-[#163a2f] px-4 py-4 font-serif text-3xl leading-tight tracking-tight text-[#faf8ed] sm:px-6 sm:py-5 sm:text-4xl">
-        {t("Your recommendations")}
+        {t(pageTitles.recommendations)}
       </h1>
     </header>
   );
@@ -68,8 +69,8 @@ function AnalysisResults({ analysis, localize }: {
                 <Link href={{
                   pathname: `/recommendations/${encodeURIComponent(zone.zoneId)}`,
                   query: { result: analysis.id },
-                }} aria-label={t("View zone analysis for {zone}", { zone: localize(zone.zoneName) })} className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-[#c8d9cb] px-3 text-sm font-semibold text-[#164334] hover:bg-[#eaf1e6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#164334]">
-                  {t("View zone analysis")}
+                }} aria-label={t("View information for {zone}", { zone: localize(zone.zoneName) })} className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-[#c8d9cb] px-3 text-sm font-semibold text-[#164334] hover:bg-[#eaf1e6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#164334]">
+                  {t("View information")}
                 </Link>
               </div>
             </li>
