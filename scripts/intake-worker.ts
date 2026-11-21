@@ -10,6 +10,7 @@ type ConversationJob = {
   user_id: string;
   content: string;
   preferences: unknown;
+  profile_version: number;
   awaiting_question: string | null;
   attempts: number;
   max_attempts: number;
@@ -19,7 +20,7 @@ async function runConversation() {
   const completion = await intakeTransaction(async (client) => {
     const { rows: [job] } = await client.query<ConversationJob>(`
       SELECT j.id, j.message_id, j.session_id, j.attempts, j.max_attempts,
-             m.content, s.user_id, s.preferences, s.awaiting_question
+             m.content, s.user_id, s.preferences, s.awaiting_question, s.profile_version
       FROM analysis_jobs j
       JOIN conversation_messages m ON m.id = j.message_id
       JOIN conversation_sessions s ON s.id = j.session_id
@@ -69,7 +70,7 @@ async function runConversation() {
     const { rows: [session] } = await client.query<{ next_message_sequence: string }>(
       `WITH prior AS (
          SELECT id, (preferences - 'language') IS DISTINCT FROM ($2::jsonb - 'language') AS changed, ready_for_analysis
-         FROM conversation_sessions WHERE id = $1 FOR UPDATE
+         FROM conversation_sessions WHERE id = $1 AND profile_version = $7 FOR UPDATE
        )
        UPDATE conversation_sessions s SET preferences = $2,
           profile_version = s.profile_version + CASE WHEN prior.changed OR ($4 AND NOT prior.ready_for_analysis) THEN 1 ELSE 0 END,
@@ -79,8 +80,11 @@ async function runConversation() {
        FROM prior WHERE s.id = prior.id
        RETURNING (s.next_message_sequence - 1) AS next_message_sequence`,
       [job.session_id, result.profile, { lastProcessedMessageId: job.message_id }, result.ready, result.question,
-        result.ready ? "READY" : "WAITING_FOR_USER"],
+        result.ready ? "READY" : "WAITING_FOR_USER", job.profile_version],
     );
+    // A web edit landed during extraction. Reprocess the queued message against the saved profile.
+    if (!session) return true;
+
     const reply = result.reply;
     const { rows: [message] } = await client.query<{ id: string }>(
       `INSERT INTO conversation_messages (session_id, sequence_no, direction, content, delivery_status)

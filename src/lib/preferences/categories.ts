@@ -48,7 +48,7 @@ const preferenceCategory = z.object({
 export const preferenceCategories = z.array(preferenceCategory).max(categoryId.options.length);
 export type PreferenceCategory = z.infer<typeof preferenceCategory>;
 
-export function hasCompleteWeights(categories: PreferenceCategory[]) {
+export function hasCompleteWeights(categories: Pick<PreferenceCategory, "weight">[]) {
   return categories.length > 0
     && categories.every(({ weight }) => weight !== null)
     && categories.reduce((sum, { weight }) => sum + (weight ?? 0), 0) === 100;

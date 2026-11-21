@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ProfileView } from "../profile/profile-view";
 import { useLiff } from "../providers/LiffProvider";
 import { categoryLabels, hasCompleteWeights, type PreferenceCategory } from "@/lib/preferences/categories";
 
 type Settings = {
+  sessionId: string;
+  version: number;
   categories: PreferenceCategory[];
   budget: number | null;
   transport: string | null;
@@ -76,31 +79,39 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
   const total = categories.reduce((sum, { weight }) => sum + (weight ?? 0), 0);
   const complete = hasCompleteWeights(categories);
   const transport = settings?.preferredModes.join(", ") || settings?.transport?.replaceAll("_", " ");
-  const housingDetails = [
+  const housingDetails: [string, string | null | undefined][] = [
     ["Destination", settings?.destination],
     ["Monthly rent ceiling", settings?.budget ? `฿${settings.budget.toLocaleString("en-TH")}` : null],
     ["Transport", transport],
     ["Housing types", settings?.housing.join(", ")],
   ];
-  const details = showProfile
-    ? [["LINE display name", profile?.displayName], ...housingDetails]
-    : housingDetails.filter(([, value]) => value);
+  const signIn = () => liffObject?.login({ redirectUri: window.location.href });
+  if (showProfile) {
+    const message = liffError ? "Open this page from LINE to load your saved priorities."
+      : view.status === "loading" ? "Loading your saved priorities…"
+        : view.status === "error" ? view.message
+          : view.status === "sign-in" ? "Sign in to see your saved priorities."
+            : undefined;
+    return (
+      <ProfileView
+        profile={profile}
+        priorities={settings}
+        details={housingDetails}
+        message={message}
+        signIn={view.status === "sign-in" ? signIn : undefined}
+        getToken={() => liffObject?.getIDToken()}
+        reload={() => window.location.reload()}
+      />
+    );
+  }
+
+  const details = housingDetails.filter(([, value]) => value);
 
   return (
     <main className="min-h-screen bg-stone-100 px-5 py-10 text-stone-900 sm:py-16">
       <div className="mx-auto max-w-2xl">
         <p className="mb-3 text-sm font-semibold text-emerald-800">Yoo Nai Dee</p>
-        <div className="flex items-center gap-4">
-          {profile?.pictureUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={profile.pictureUrl} alt="" width={56} height={56} className="size-14 rounded-full object-cover" />
-          )}
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              {showProfile ? "Your profile" : "Housing preferences"}
-            </h1>
-          </div>
-        </div>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Housing preferences</h1>
         <p className="mt-3 text-sm text-stone-600">Update your preferences in the Yoo Nai Dee LINE chat.</p>
 
         {liffError && <p className="mt-8 rounded-xl bg-white p-5" role="alert">Could not start LINE sign-in.</p>}
@@ -109,26 +120,23 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
         {view.status === "sign-in" && (
           <button
             className="mt-8 rounded-lg bg-emerald-800 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-900"
-            onClick={() => liffObject?.login({ redirectUri: window.location.href })}
+            onClick={signIn}
           >
             Sign in with LINE
           </button>
         )}
 
-        {!showProfile && view.status === "loaded" && categories.length === 0 && details.length === 0 && (
+        {view.status === "loaded" && categories.length === 0 && details.length === 0 && (
           <p className="mt-8 rounded-xl bg-white p-5">No housing preferences saved yet. Tell us what you’re looking for in the Yoo Nai Dee LINE chat.</p>
         )}
-        {(showProfile || categories.length > 0) && (
+        {categories.length > 0 && (
           <section aria-labelledby="priorities" className="mt-8 rounded-2xl border border-stone-200 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 px-5 py-4">
               <h2 id="priorities" className="text-lg font-semibold">Location priorities</h2>
-              {categories.length > 0 && (
-                <span className={complete ? "text-sm font-semibold text-emerald-800" : "text-sm font-medium text-amber-800"}>
-                  {total}% {complete ? "total" : "allocated · in progress"}
-                </span>
-              )}
+              <span className={complete ? "text-sm font-semibold text-emerald-800" : "text-sm font-medium text-amber-800"}>
+                {total}% {complete ? "total" : "allocated · in progress"}
+              </span>
             </div>
-            {categories.length === 0 && <p className="px-5 py-4 text-stone-600">—</p>}
             <ul className="divide-y divide-stone-100">
               {categories.map(({ category, places, weight }) => (
                 <li key={category} className="flex items-start justify-between gap-4 px-5 py-4">

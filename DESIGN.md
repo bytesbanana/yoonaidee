@@ -8,7 +8,7 @@ Minimal design system for LINE-first AI neighborhood recommendations.
 2. **One card per idea.** No dashboards, no grids of panels. A single card holds the whole message.
 3. **Neutral surfaces, one accent.** UI stays monochrome (`--primary`, `--muted`, `--border`). Accent color reserved for actions and scores.
 4. **Honest states.** Loading, error, and empty states get their own layout — not a spinner over blank space.
-5. **Mobile width.** Design target 390px (iPhone). Desktop centers content at `max-w-md`.
+5. **Mobile width.** Design target 390px (iPhone). Desktop centers content in a single column.
 
 ## Tokens
 
@@ -27,19 +27,12 @@ Spacing scale: Tailwind default (`p-4`, `p-6`, `gap-2`, `gap-4`). Type scale: `t
 
 ## Components
 
-### Profile card
+### Profile page
 
-```
-┌────────────────────────────┐
-│  [avatar 96px, rounded-full] │
-│  Display Name      ← text-xl │
-│  U123…             ← text-xs muted │
-└────────────────────────────┘
-```
-
-- Avatar: `img`, 96×96, `rounded-full`, `object-cover`. Fallback: initials on `bg-muted`.
-- Name: `text-xl font-semibold tracking-tight`.
-- User ID: `text-xs text-muted-foreground`, monospace optional.
+- Put the profile title and small LINE avatar at the top, with housing details below the priorities editor.
+- Give lifestyle priorities the most prominent card. Show the total out of 100% in the header, then one row per saved category with its name, places, a proportional bar and a numeric percentage field.
+- Use emerald for allocation and the primary action. Keep the inputs large enough for mobile touch and require whole percentages totaling 100% before saving.
+- Keep the priority card visible when no categories are available. Direct users to the LINE chat to add categories.
 
 ### State blocks
 

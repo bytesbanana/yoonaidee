@@ -138,6 +138,13 @@ const savedWeights = z.object({
   categories: preferenceCategories,
 });
 
+export function pendingWeightCategories(profile: unknown, question: string | null) {
+  if (!question) return null;
+  const saved = savedWeights.safeParse(profile);
+  if (!saved.success || saved.data.categories.length === 0 || hasCompleteWeights(saved.data.categories)) return null;
+  return question === weightQuestion(saved.data.categories, saved.data.language) ? saved.data.categories : null;
+}
+
 const responseSchema = z.object({
   output: z.array(z.object({
     type: z.string(),
@@ -150,17 +157,16 @@ export async function processConversation(input: {
   previousProfile: unknown;
   previousQuestion: string | null;
 }) {
-  const saved = savedWeights.safeParse(input.previousProfile);
-  if (
-    saved.success && saved.data.categories.length && !hasCompleteWeights(saved.data.categories)
-    && input.previousQuestion === weightQuestion(saved.data.categories, saved.data.language)
-    && /^(confirm|ยืนยัน)[.!]?$/i.test(input.message.trim())
-  ) {
+  const confirmed = /^(confirm|ยืนยัน)[.!]?$/i.test(input.message.trim())
+    ? pendingWeightCategories(input.previousProfile, input.previousQuestion)
+    : null;
+  if (confirmed) {
+    const previous = input.previousProfile as ReturnType<typeof toProfile>;
     return {
-      profile: { ...input.previousProfile as ReturnType<typeof toProfile>, categories: suggestWeights(saved.data.categories) },
+      profile: { ...previous, categories: suggestWeights(confirmed) },
       ready: true,
       question: null,
-      reply: questions[saved.data.language].ready,
+      reply: questions[previous.language].ready,
     };
   }
 
