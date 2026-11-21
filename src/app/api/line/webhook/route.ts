@@ -26,6 +26,10 @@ export async function POST(request: Request) {
     if (!parsed.success) continue;
 
     const eventId = parsed.data.webhookEventId;
+    if (!process.env.DATABASE_URL) {
+      console.error("line.webhook.enqueue_failed", { eventId, code: "DATABASE_URL_MISSING" });
+      return new Response("Webhook temporarily unavailable", { status: 503 });
+    }
     try {
       const jobId = await enqueueTextEvent(parsed.data);
       if (jobId) {
@@ -33,8 +37,12 @@ export async function POST(request: Request) {
       } else {
         console.info("line.webhook.duplicate", { eventId });
       }
-    } catch {
-      console.error("line.webhook.enqueue_failed", { eventId });
+    } catch (error) {
+      const candidate = error instanceof Error && "code" in error ? error.code : undefined;
+      const code = typeof candidate === "string" && /^[A-Z0-9_]{1,32}$/.test(candidate)
+        ? candidate
+        : "UNKNOWN";
+      console.error("line.webhook.enqueue_failed", { eventId, code });
       return new Response("Webhook temporarily unavailable", { status: 503 });
     }
   }

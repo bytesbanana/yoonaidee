@@ -96,7 +96,7 @@ Turn one or many user messages into a coherent, versioned `HousingPreferenceProf
 
 ## 1.4 Readiness rules
 
-Minimum to trigger research: **destination description**, **maximum monthly rental budget**, **primary transport mode**. Exact coordinates are **not required at this stage**. In Research Stage, the destination must successfully resolve to coordinates for routing. Optional needs (gym, food, max commute, housing type) should not block analysis unless the user's wording makes them essential/hard constraints.
+Minimum to trigger research: **destination description**, **maximum monthly rental budget**, **primary transport mode**, and **selected category weights totaling 100%**. Exact coordinates are **not required at this stage**. In Research Stage, the destination must successfully resolve to coordinates for routing. Optional needs (gym, food, max commute, housing type) should not block analysis unless the user's wording makes them essential/hard constraints.
 
 If user says “เริ่มหาเลย”, use documented defaults for optional data only. Never default a missing workplace or invent a budget. If location is ambiguous, Stage 2 may request clarification by setting job `NEEDS_INPUT` and session `WAITING_FOR_USER` and enqueueing an appropriate LINE question.
 
@@ -303,7 +303,7 @@ The web app and intake worker use `docs/yoo_nai_dee_init.sql` as their shared sc
 
 Run `npm run dev` and, in a separate process, `npm run intake:worker`. Set your LINE Messaging API webhook URL to your public HTTPS app URL plus `/api/line/webhook`. The worker consumes `CONVERSATION` jobs and sends its own outbox messages by LINE Push. The research worker can consume queued `ANALYSIS` rows using `input_snapshot.profile` and `input_snapshot.profileVersion`. It needs to be configured separately. A search-area destination anchors a search for someone who has no regular commute and should be treated accordingly by research.
 
-For a smoke check, send “อยากได้คอนโดใกล้ยิมกับตลาด ทำงานอโศก งบไม่เกิน 15,000 บาทต่อเดือน”. The bot should ask about transportation. Reply “BTS” and check that an `ANALYSIS` job contains the destination, rent ceiling, BTS preference, gym and market priorities, and condo preference. This intake uses the configured OpenAI model.
+For a smoke check, send “อยากได้คอนโดใกล้ยิมกับตลาด ทำงานอโศก งบไม่เกิน 15,000 บาทต่อเดือน”. The bot should ask about transportation. Reply “BTS”, then “ยืนยัน” when it suggests a weight split. Check that an `ANALYSIS` job contains the destination, rent ceiling, BTS preference, gym and market priorities, and condo preference. This intake uses the configured OpenAI model.
 
 ### Trace a real LINE OA message
 
@@ -319,3 +319,9 @@ Send a one-to-one text message to the OA as a LINE user. Open the web app and wo
 | `line.push.accepted` | The LINE API accepted the outbound reply. Check the OA chat to confirm receipt. |
 
 If the trace stops after queueing, check for `line.worker.ready` and verify both processes use the same database. `line.agent.failed` identifies an extraction failure. `line.push.failed` shows the HTTP status if LINE returned a response. The trace omits message text, LINE user IDs, and credentials.
+
+### Housing preferences in LINE and on the web
+
+The intake agent saves the selected catalog categories, their named places (or an empty list for any nearby place), and their weights in `conversation_sessions.preferences.categories`. It saves partial progress after each message. The worker queues research only when the required housing details are present and the category weights add up to 100%. Users can supply a split in chat or reply “confirm” / “ยืนยัน” to the suggested split. The existing schema supports these additions without a database migration.
+
+For the web view, create a LIFF app in a LINE Login channel under the same LINE provider as the Messaging API channel. Set its endpoint URL to `https://<your-public-host>/settings`, enable the `openid` scope, and configure `NEXT_PUBLIC_LIFF_ID` and `LINE_LOGIN_CHANNEL_ID` on the web service before building and deploying. Use the LIFF URL for the LINE rich menu link. The settings API verifies the ID token with LINE and reads the profile associated with its subject. The settings page displays saved preferences and directs updates to the LINE chat.
