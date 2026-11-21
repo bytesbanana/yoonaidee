@@ -27,6 +27,17 @@ Spacing scale: Tailwind default (`p-4`, `p-6`, `gap-2`, `gap-4`). Type scale: `t
 
 ## Components
 
+### Homepage
+
+- Use a Bangkok hero image, a forest-green accent, and two clearly labeled navigation cards.
+- Stack the image and navigation cards at phone widths. Pair the hero copy with the image on wider screens.
+- Link **Profile** to `/profile` and **Current Lifestyle Optimization** to `/recommendations`.
+
+### Recommendations page
+
+- Direct people to the Yoo Nai Dee LINE chat to request recommendations or revisit results delivered there.
+
+
 ### Profile page
 
 - Put the profile title and small LINE avatar at the top, with housing details below the priorities editor.
@@ -45,4 +56,4 @@ Loading / error / waiting use same shell: centered column, `text-sm text-muted-f
 
 ## Scope
 
-Covers `/` and `/profile` only. Flex Message templates live in LINE and follow their own spec.
+Covers `/`, `/profile`, and `/recommendations`. Flex Message templates live in LINE and follow their own spec.

@@ -1,53 +1,83 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowUpRight, Compass, MapPin, UserRound } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Yoo Nai Dee | Find your neighborhood in Bangkok",
+  description: "Explore Bangkok neighborhoods around your commute, budget, and lifestyle.",
+};
+
+const destinations = [
+  {
+    href: "/profile",
+    title: "Profile",
+    description: "Manage your commute, rent budget, and lifestyle priorities.",
+    icon: UserRound,
+  },
+  {
+    href: "/recommendations",
+    title: "Current Lifestyle Optimization",
+    description: "Find out where to see your personalized neighborhood recommendations.",
+    icon: Compass,
+  },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-25"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/6 px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="min-h-dvh bg-[#f8f7f2] px-5 [font-family:var(--font-geist-sans),sans-serif] pb-12 text-[#172c24] sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-6xl">
+        <header className="flex items-center gap-3 py-6 sm:py-8">
+          <span className="grid size-10 place-items-center rounded-2xl bg-[#164334] text-white">
+            <MapPin aria-hidden="true" className="size-5" />
+          </span>
+          <div className="leading-tight">
+            <p className="font-semibold tracking-tight">Yoo Nai Dee</p>
+            <p lang="th" className="text-xs text-[#52645a]">อยู่ไหนดี</p>
+          </div>
+        </header>
+
+        <section className="grid overflow-hidden rounded-[2rem] bg-[#163a2f] text-[#faf8ed] md:grid-cols-[1fr_1.12fr]">
+          <div className="flex flex-col justify-center px-7 py-10 sm:px-12 md:px-9 lg:px-14 lg:py-16">
+            <h1 className="max-w-lg font-serif text-[clamp(2.75rem,5.5vw,4.4rem)] leading-[0.98] tracking-[-0.055em]">
+              Find your place <em className="block font-normal text-[#d9edaa]">in Bangkok.</em>
+            </h1>
+            <p className="mt-6 max-w-sm text-base leading-relaxed text-[#e0e9dd] lg:text-lg">
+              Discover neighborhoods that fit your commute, rent budget, and the things you love to do.
+            </p>
+          </div>
+          <div className="relative min-h-52 sm:min-h-64 md:min-h-[27rem]">
+            <Image
+              src="/bangkok-hero.webp"
+              alt=""
+              fill
+              preload
+              sizes="(min-width: 1280px) 610px, (min-width: 768px) 53vw, 100vw"
+              className="object-cover object-[60%_50%]"
+            />
+          </div>
+        </section>
+
+        <nav aria-label="Main navigation" className="mt-5 grid gap-4 md:grid-cols-2">
+          {destinations.map(({ href, title, description, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              aria-labelledby={href.slice(1)}
+              className="group grid grid-cols-[auto_1fr_auto] items-start gap-4 rounded-3xl border border-[#dce3d9] bg-white p-5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#164334] motion-safe:transition-colors hover:border-[#829e89] hover:bg-[#f4f8ef] sm:p-7"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <Link
-            href="/profile"
-            className="flex h-12 items-center justify-center rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2"
-          >
-            Go to Profile
-          </Link>
-        </div>
-      </main>
-    </div>
+              <span className="grid size-11 place-items-center rounded-2xl bg-[#eaf1e6] text-[#164334]">
+                <Icon aria-hidden="true" className="size-5" />
+              </span>
+              <div className="min-w-0 self-center">
+                <h2 id={href.slice(1)} className="text-lg leading-tight font-semibold tracking-tight sm:text-xl">{title}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-[#52645a]">{description}</p>
+              </div>
+              <ArrowUpRight aria-hidden="true" className="mt-1 size-5 text-[#164334] motion-safe:transition-transform motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5" />
+            </Link>
+          ))}
+        </nav>
+      </div>
+    </main>
   );
 }
