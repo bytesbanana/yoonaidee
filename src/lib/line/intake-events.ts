@@ -10,7 +10,7 @@ export const textEvent = z.object({
 });
 
 export async function enqueueTextEvent(event: z.infer<typeof textEvent>) {
-  await intakeTransaction(async (client) => {
+  return intakeTransaction(async (client) => {
     const { rows: [user] } = await client.query<{ id: string }>(
       `INSERT INTO users (line_user_id) VALUES ($1)
        ON CONFLICT (line_user_id) DO UPDATE SET updated_at = now() RETURNING id`,
@@ -31,12 +31,13 @@ export async function enqueueTextEvent(event: z.infer<typeof textEvent>) {
        VALUES ($1, $2, 'IN', $3, $4, $5) ON CONFLICT DO NOTHING RETURNING id`,
       [session.id, session.next_message_sequence, event.message.id, event.webhookEventId, event.message.text],
     );
-    if (!message) return;
+    if (!message) return null;
     await client.query("UPDATE conversation_sessions SET next_message_sequence = next_message_sequence + 1 WHERE id = $1", [session.id]);
-    await client.query(
+    const { rows: [job] } = await client.query<{ id: string }>(
       `INSERT INTO analysis_jobs (session_id, message_id, job_type, idempotency_key)
-       VALUES ($1, $2, 'CONVERSATION', $3)`,
+       VALUES ($1, $2, 'CONVERSATION', $3) RETURNING id`,
       [session.id, message.id, `conversation:${message.id}`],
     );
+    return job.id;
   });
 }

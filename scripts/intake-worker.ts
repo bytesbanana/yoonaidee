@@ -15,7 +15,7 @@ type ConversationJob = {
 };
 
 async function runConversation() {
-  return intakeTransaction(async (client) => {
+  const completion = await intakeTransaction(async (client) => {
     const { rows: [job] } = await client.query<ConversationJob>(`
       SELECT j.id, j.message_id, j.session_id, j.attempts, j.max_attempts,
              m.content, s.user_id, s.preferences, s.awaiting_question
@@ -34,6 +34,7 @@ async function runConversation() {
     `);
     if (!job) return false;
 
+    console.info("line.agent.started", { jobId: job.id, attempt: job.attempts + 1 });
     let result: Awaited<ReturnType<typeof processConversation>>;
     try {
       result = await processConversation({
@@ -43,7 +44,7 @@ async function runConversation() {
       });
     } catch {
       const terminal = job.attempts + 1 >= job.max_attempts;
-      console.error("Intake extraction failed", { jobId: job.id, terminal });
+      console.error("line.agent.failed", { jobId: job.id, attempt: job.attempts + 1, terminal });
       await client.query(
         `UPDATE analysis_jobs SET attempts = attempts + 1, status = $2, updated_at = now(),
            run_after = now() + interval '10 seconds', last_error = 'Intake extraction failed'
@@ -110,22 +111,30 @@ async function runConversation() {
           completed_at = now(), updated_at = now(), last_error = NULL WHERE id = $1`,
       [job.id],
     );
-    return true;
+    return {
+      jobId: job.id,
+      clarificationNeeded: result.question !== null,
+      analysisQueued: session.should_analyze,
+    };
   });
+  if (typeof completion === "object") console.info("line.agent.completed", completion);
+  return Boolean(completion);
 }
 
 type Notification = {
   id: string;
   line_user_id: string;
+  job_id: string;
   attempts: number;
   max_attempts: number;
   payload: { messageId?: string; messages: { type: "text"; text: string }[] };
 };
 
 async function deliverIntakeMessage() {
-  return intakeTransaction(async (client) => {
+  const delivery = await intakeTransaction(async (client) => {
     const { rows: [notification] } = await client.query<Notification>(`
-      SELECT n.id, n.attempts, n.max_attempts, n.payload, u.line_user_id
+      SELECT n.id, n.attempts, n.max_attempts, n.payload, u.line_user_id,
+             split_part(n.idempotency_key, ':', 2) AS job_id
       FROM notification_outbox n JOIN users u ON u.id = n.user_id
       WHERE n.notification_type = 'CONVERSATION_MESSAGE' AND n.status = 'PENDING'
         AND (n.idempotency_key LIKE 'intake:%' OR n.idempotency_key LIKE 'intake-failure:%')
@@ -141,6 +150,7 @@ async function deliverIntakeMessage() {
     if (!notification) return false;
 
     let accepted = false;
+    let httpStatus: number | null = null;
     try {
       const response = await fetch("https://api.line.me/v2/bot/message/push", {
         method: "POST",
@@ -152,6 +162,7 @@ async function deliverIntakeMessage() {
         body: JSON.stringify({ to: notification.line_user_id, messages: notification.payload.messages }),
         signal: AbortSignal.timeout(8000),
       });
+      httpStatus = response.status;
       accepted = response.ok || (response.status === 409 && response.headers.has("x-line-accepted-request-id"));
     } catch {
       // Retry with the same LINE retry key after a transport failure.
@@ -159,7 +170,6 @@ async function deliverIntakeMessage() {
 
     const terminal = notification.attempts + 1 >= notification.max_attempts;
     const status = accepted ? "SENT" : terminal ? "FAILED" : "PENDING";
-    if (!accepted) console.error("LINE intake push failed", { notificationId: notification.id, terminal });
     await client.query(
       `UPDATE notification_outbox SET status = $2, attempts = attempts + 1,
           updated_at = now(), next_attempt_at = now() + interval '10 seconds',
@@ -171,13 +181,22 @@ async function deliverIntakeMessage() {
     if (notification.payload.messageId && status !== "PENDING") {
       await client.query("UPDATE conversation_messages SET delivery_status = $2 WHERE id = $1", [notification.payload.messageId, status]);
     }
-    return true;
+    return { jobId: notification.job_id, notificationId: notification.id, httpStatus, status };
   });
+  if (!delivery) return false;
+  if (delivery.status === "SENT") {
+    console.info("line.push.accepted", delivery);
+  } else {
+    console.error("line.push.failed", delivery);
+  }
+  return true;
 }
 
 for (const key of ["DATABASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL", "LINE_CHANNEL_ACCESS_TOKEN"]) {
   if (!process.env[key]) throw new Error(`Missing ${key}`);
 }
+
+console.info("line.worker.ready");
 
 while (true) {
   try {

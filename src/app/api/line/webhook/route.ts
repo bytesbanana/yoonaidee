@@ -20,14 +20,23 @@ export async function POST(request: Request) {
     return new Response("Invalid event payload", { status: 400 });
   }
 
-  try {
-    for (const event of events) {
-      const parsed = textEvent.safeParse(event);
-      if (parsed.success) await enqueueTextEvent(parsed.data);
+  console.info("line.webhook.accepted", { eventCount: events.length });
+  for (const event of events) {
+    const parsed = textEvent.safeParse(event);
+    if (!parsed.success) continue;
+
+    const eventId = parsed.data.webhookEventId;
+    try {
+      const jobId = await enqueueTextEvent(parsed.data);
+      if (jobId) {
+        console.info("line.webhook.queued", { eventId, jobId });
+      } else {
+        console.info("line.webhook.duplicate", { eventId });
+      }
+    } catch {
+      console.error("line.webhook.enqueue_failed", { eventId });
+      return new Response("Webhook temporarily unavailable", { status: 503 });
     }
-  } catch {
-    console.error("LINE intake enqueue failed");
-    return new Response("Webhook temporarily unavailable", { status: 503 });
   }
   return new Response("OK");
 }

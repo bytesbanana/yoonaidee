@@ -304,3 +304,18 @@ The web app and intake worker use `docs/yoo_nai_dee_init.sql` as their shared sc
 Run `npm run dev` and, in a separate process, `npm run intake:worker`. Set your LINE Messaging API webhook URL to your public HTTPS app URL plus `/api/line/webhook`. The worker consumes `CONVERSATION` jobs and sends its own outbox messages by LINE Push. The research worker can consume queued `ANALYSIS` rows using `input_snapshot.profile` and `input_snapshot.profileVersion`. It needs to be configured separately. A search-area destination anchors a search for someone who has no regular commute and should be treated accordingly by research.
 
 For a smoke check, send “อยากได้คอนโดใกล้ยิมกับตลาด ทำงานอโศก งบไม่เกิน 15,000 บาทต่อเดือน”. The bot should ask about transportation. Reply “BTS” and check that an `ANALYSIS` job contains the destination, rent ceiling, BTS preference, gym and market priorities, and condo preference. This intake uses the configured OpenAI model.
+
+### Trace a real LINE OA message
+
+Register the public HTTPS `/api/line/webhook` URL for your Messaging API channel and enable **Use webhook**. Configure the web app and intake worker with the same `DATABASE_URL`. The LINE Console's **Verify** action can send an empty batch. Expect `line.webhook.accepted` with `eventCount: 0` for that check.
+
+Send a one-to-one text message to the OA as a LINE user. Open the web app and worker logs and follow the same `jobId` through these entries:
+
+| Log entry | What it confirms |
+| --- | --- |
+| `line.webhook.queued` | The signed LINE message was saved and a conversation job was queued. |
+| `line.agent.started` | The worker picked up the job and is calling the agent. |
+| `line.agent.completed` | Agent output was validated and the reply was queued. `clarificationNeeded` and `analysisQueued` show which path ran. |
+| `line.push.accepted` | The LINE API accepted the outbound reply. Check the OA chat to confirm receipt. |
+
+If the trace stops after queueing, check for `line.worker.ready` and verify both processes use the same database. `line.agent.failed` identifies an extraction failure. `line.push.failed` shows the HTTP status if LINE returned a response. The trace omits message text, LINE user IDs, and credentials.
