@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { processConversation } from "../agent/conversation";
 import { intakeTransaction } from "../db/intake-db";
-import { buildIntakeFlex, type IntakeLineMessage } from "./intake-flex";
+import { buildAnalysisQueuedFlex, type IntakeLineMessage } from "./intake-flex";
 
 export const textEvent = z.object({
   type: z.literal("message"),
@@ -111,10 +111,7 @@ export async function handleTextEvent(event: z.infer<typeof textEvent>): Promise
         [session.id, message.id, key, version, { ...profile, profileVersion: version }],
       );
       if (!job) return {};
-      const language = profile.language === "en" ? "en" : "th";
-      const reply = language === "en" ? "I’m searching for neighborhoods that match your preferences."
-        : "กำลังค้นหาย่านที่ตรงกับความต้องการของคุณครับ";
-      return { jobId: job.id, reply: buildIntakeFlex({ reply, language, needsClarification: false }) };
+      return { jobId: job.id, reply: buildAnalysisQueuedFlex() };
     }
 
     if (/^(retry|ลองใหม่)$/i.test(event.message.text)) {
