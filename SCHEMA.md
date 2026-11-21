@@ -2,7 +2,7 @@
 
 **Scope:** Lean MVP. Four tables, minimal indexes. Assumptions are allowed to change — if the shape is wrong, edit this file and `src/lib/db/schema.ts` together.
 
-Drizzle source of truth: `src/lib/db/schema.ts`.
+Drizzle source of truth: `src/lib/db/schema.ts` (added with the app scaffold). The worker repo `yoonaidee-background-worker` (submodule) must use the exact same table shape.
 
 ---
 
