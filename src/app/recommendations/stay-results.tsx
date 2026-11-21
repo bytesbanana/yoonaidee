@@ -3,14 +3,9 @@ import Link from "next/link";
 import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import { compareSampleAreas, directionsUrl, formatBaht, formatStayDate, stayNights, type SavedSearch } from "./stay-search";
 
-const secondaryAction = "inline-flex min-h-11 items-center rounded-xl border border-[#aebcb0] px-3.5 text-sm font-semibold text-[#164334] hover:bg-[#eaf1e6]";
-
-export function StayResults({ search, onEdit, onNew }: {
-  search: SavedSearch;
-  onEdit: () => void;
-  onNew: () => void;
-}) {
-  const nights = stayNights(search.moveIn, search.moveOut);
+export function StayResults({ search }: { search: SavedSearch }) {
+  const dated = "moveIn" in search;
+  const nights = dated ? stayNights(search.moveIn, search.moveOut) : 30;
   const areas = compareSampleAreas(nights, search.budget);
   const matches = areas.filter(({ withinBudget }) => withinBudget > 0);
   const shortlist = matches.slice(0, 3);
@@ -21,14 +16,14 @@ export function StayResults({ search, onEdit, onNew }: {
         <div className="min-w-0 p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h3 className="font-serif text-2xl tracking-tight">{zone.name}</h3>
-            <p className="text-sm text-[#52645a]">From <strong className="text-base text-[#172c24] tabular-nums">{formatBaht(from)}</strong> / stay</p>
+            <p className="text-sm text-[#52645a]">From <strong className="text-base text-[#172c24] tabular-nums">{formatBaht(from)}</strong> / {dated ? "stay" : "month"}</p>
           </div>
           <p className="mt-2 text-sm text-[#52645a]">
             {withinBudget === 1 ? "1 sample listing within budget" : `${withinBudget} sample listings within budget`}
           </p>
           <p className="mt-1 text-sm text-[#52645a]">Minimum stay and availability unconfirmed</p>
           <div className="mt-3 flex flex-wrap gap-x-5">
-            <Link href={{ pathname: `/recommendations/${zone.slug}`, query: { search: search.id, nights, budget: search.budget } }}
+            <Link href={{ pathname: `/recommendations/${zone.slug}`, query: dated ? { search: search.id, nights, budget: search.budget } : { search: search.id } }}
               className="inline-flex min-h-11 items-center text-sm font-semibold text-[#164334] underline underline-offset-4">
               View sample stays
             </Link>
@@ -53,31 +48,28 @@ export function StayResults({ search, onEdit, onNew }: {
           <MapPin aria-hidden="true" className="mt-1.5 size-5 shrink-0 text-[#164334]" /> <span className="min-w-0">{search.destination}</span>
         </h2>
         <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-[#2f4e40]">
-          <p className="flex items-center gap-2">
-            <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
-            <span>{formatStayDate(search.moveIn)} – {formatStayDate(search.moveOut)} · {nights} {nights === 1 ? "night" : "nights"}</span>
-          </p>
-          <p>{formatBaht(search.budget)} total rent budget</p>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={onEdit} className={secondaryAction}>Update recommendation</button>
-          <button type="button" onClick={onNew} className={secondaryAction}>Search for another stay</button>
+          {dated && (
+            <p className="flex items-center gap-2">
+              <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
+              <span>{formatStayDate(search.moveIn)} – {formatStayDate(search.moveOut)} · {nights} {nights === 1 ? "night" : "nights"}</span>
+            </p>
+          )}
+          <p>{formatBaht(search.budget)} {dated ? "total rent budget" : "monthly rent ceiling"}</p>
         </div>
       </section>
 
       <section aria-labelledby="shortlist-heading" className="mt-7">
         <h2 id="shortlist-heading" className="font-serif text-3xl tracking-tight">Sample area shortlist</h2>
         <p className="mt-2 text-sm leading-relaxed text-[#52645a]">
-          Ordered by estimated base rent using fictional monthly rates prorated over 30 nights. Fees and deposits are separate.
+          {dated ? "Ordered by estimated base rent using fictional monthly rates prorated over 30 nights." : "Ordered by fictional monthly base rent."} Fees and deposits are separate.
           Commute links start from the area, so check the route from the exact address before committing.
         </p>
         {shortlist.length > 0 ? (
           <ol className="mt-4 space-y-3">{shortlist.map(areaCard)}</ol>
         ) : (
           <div className="mt-4 rounded-2xl border border-[#dce3d9] bg-white p-5">
-            <h3 className="font-semibold">No sample stays fit this budget</h3>
-            <p className="mt-1 text-sm text-[#52645a]">The lowest sample estimate is {formatBaht(areas[0].from)} for these dates.</p>
-            <button type="button" onClick={onEdit} className={`${secondaryAction} mt-3`}>Change dates or budget</button>
+            <h3 className="font-semibold">No sample listings fit this budget</h3>
+            <p className="mt-1 text-sm text-[#52645a]">The lowest sample estimate is {formatBaht(areas[0].from)}{dated ? " for these dates" : " per month"}.</p>
           </div>
         )}
         {areas.length > shortlist.length && (

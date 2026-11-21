@@ -103,6 +103,8 @@ export function SettingsView({ showProfile = false }: { showProfile?: boolean })
         profile={profile}
         priorities={settings}
         details={housingDetails}
+        recommendationDestination={settings?.destination && normalizeLocation(settings.destination)}
+        recommendationBudget={settings?.budget}
         message={message}
         signIn={view.status === "sign-in" ? signIn : undefined}
         getAuthHeaders={() => lineAuthHeaders(liffObject)}

@@ -51,10 +51,11 @@ async function ZoneStays({ zone, searchParams }: {
 }) {
   const query = await searchParams;
   const stay = stayQuery.safeParse(query).data;
+  const searchId = z.uuid().safeParse(query.search).data;
   const previous = findPastResult(query.version);
   const backHref = {
     pathname: "/recommendations",
-    query: stay ? { search: stay.search } : previous ? { version: previous.version } : undefined,
+    query: searchId ? { search: searchId } : previous ? { version: previous.version } : undefined,
   };
   const properties = [...zone.properties].sort((a, b) => a.monthlyRentThb - b.monthlyRentThb);
 
@@ -62,7 +63,7 @@ async function ZoneStays({ zone, searchParams }: {
     <>
       <Link href={backHref} className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[#164334] hover:underline focus-visible:outline-offset-4">
         <ArrowLeft aria-hidden="true" className="size-4" />
-        {stay ? "Back to your shortlist" : "Back to recommendations"}
+        {searchId ? "Back to your shortlist" : "Back to recommendations"}
       </Link>
 
       <header className="mt-3 rounded-[2rem] bg-[#163a2f] p-6 text-[#faf8ed] sm:p-9">

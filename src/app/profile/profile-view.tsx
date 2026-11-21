@@ -1,6 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { parseSearches, readSearches, writeSearches } from "../recommendations/saved-searches";
+import { monthlySearchSchema } from "../recommendations/stay-search";
 import { useState, type FormEvent } from "react";
 import { GooglePlacePicker } from "./google-place-picker";
 import { BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
@@ -37,6 +39,8 @@ export function ProfileView({
   profile,
   priorities,
   details,
+  recommendationDestination,
+  recommendationBudget,
   message,
   signIn,
   getAuthHeaders,
@@ -45,11 +49,39 @@ export function ProfileView({
   profile: { displayName: string; pictureUrl?: string } | null;
   priorities: Priorities | null;
   details: [string, string | null | undefined][];
+  recommendationDestination?: string | null;
+  recommendationBudget?: number | null;
   message?: string;
   signIn?: () => void;
   getAuthHeaders: () => Record<string, string> | null;
   reload: () => void;
 }) {
+  const router = useRouter();
+  const [recommendationError, setRecommendationError] = useState("");
+
+  function updateRecommendation() {
+    const searches = parseSearches(readSearches());
+    const existing = searches.find((search) => "kind" in search && search.destination === recommendationDestination
+      && search.budget === recommendationBudget);
+    const result = monthlySearchSchema.safeParse({
+      kind: "monthly",
+      id: existing?.id ?? crypto.randomUUID(),
+      destination: recommendationDestination,
+      budget: recommendationBudget,
+    });
+    if (!result.success) {
+      setRecommendationError("Save a destination and monthly rent ceiling in the Yoo Nai Dee LINE chat, then reopen your profile.");
+      return;
+    }
+
+    if (!writeSearches([result.data, ...searches.filter(({ id }) => id !== result.data.id)].slice(0, 20))) {
+      setRecommendationError("This browser couldn’t save your recommendation.");
+      return;
+    }
+
+    router.push("/recommendations");
+  }
+
   return (
     <main className="min-h-dvh bg-stone-100 px-4 py-7 text-stone-900 [font-family:var(--font-geist-sans),sans-serif] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-xl">
@@ -86,9 +118,10 @@ export function ProfileView({
           </dl>
         </section>
 
-        <Link href="/recommendations?view=update" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800">
+        <button type="button" onClick={updateRecommendation} className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800">
           Update recommendation
-        </Link>
+        </button>
+        {recommendationError && <p role="alert" className="mt-2 text-sm text-red-800">{recommendationError}</p>}
       </div>
     </main>
   );

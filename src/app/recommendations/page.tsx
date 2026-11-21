@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { StayPlanner } from "./stay-planner";
+import { RecommendationViews } from "./recommendation-views";
 
 export const metadata: Metadata = {
   title: "Living zone recommendation | Yoo Nai Dee",
@@ -17,7 +17,7 @@ export default function RecommendationsPage() {
         Home
       </Link>
       <Suspense fallback={<p className="mt-8" role="status">Loading recommendations…</p>}>
-        <StayPlanner />
+        <RecommendationViews />
       </Suspense>
     </>
   );
