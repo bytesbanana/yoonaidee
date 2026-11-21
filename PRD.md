@@ -38,7 +38,7 @@ Expected: Top 3 areas, fit score, work vs lifestyle scores, estimated rent **onl
 
 **Not in MVP:** Nationwide coverage, multi-agent debate, real-time BTS timing without a valid source, complex auth, sophisticated analytics, Redis/Kafka/S3, production-scale infrastructure.
 
-The home page offers **Living zone recommendation** and **Your profile**. After LINE sign-in, **Current** shows the latest completed analysis from PostgreSQL and **Past searches** opens earlier completed analyses. Zone details use the saved analysis snapshot. Use the Yoo Nai Dee LINE chat to request an analysis. **View recommendations** on the profile opens the saved results.
+The Mini App home opens directly to **Your recommendations**. After LINE sign-in, **Latest** shows the latest completed analysis from PostgreSQL and **Past searches** opens earlier completed analyses. Zone details use the saved analysis snapshot. Use the Yoo Nai Dee LINE chat to request an analysis. **Your profile** opens the profile from the home page, and **Back to recommendations** returns to the latest results.
 
 **Reset profile** clears the active housing preferences and profile details after confirmation. The next LINE message starts a fresh intake. The LINE account and saved recommendations remain available.
 

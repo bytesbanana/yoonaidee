@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { GooglePlacePicker } from "./google-place-picker";
-import { BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, Dumbbell, MapPin, Plus, ShoppingBasket, UserRound, X, type LucideIcon } from "lucide-react";
 import {
   categoryFromName,
   categoryId,
@@ -54,6 +54,10 @@ export function ProfileView({
   return (
     <main className="min-h-dvh bg-stone-100 px-4 py-7 text-stone-900 [font-family:var(--font-geist-sans),sans-serif] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-xl">
+        <Link href="/" className="mb-2 inline-flex min-h-11 items-center gap-2 rounded-lg px-1 text-sm font-semibold text-emerald-900 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-900">
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          Back to recommendations
+        </Link>
         <header className="mb-6 flex items-center justify-between gap-4 px-1">
           <h1 className="text-3xl font-semibold tracking-tight">Your profile</h1>
           {profile?.pictureUrl ? (
@@ -86,10 +90,6 @@ export function ProfileView({
             ))}
           </dl>
         </section>
-
-        <Link href="/recommendations" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800">
-          View recommendations
-        </Link>
       </div>
     </main>
   );

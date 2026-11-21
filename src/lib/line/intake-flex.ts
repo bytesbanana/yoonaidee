@@ -68,7 +68,7 @@ export function buildAnalysisQueuedFlex() {
           color: "#06C755",
           action: {
             type: "uri",
-            label: "ดูสถานะการค้นหา",
+            label: "ดูคำแนะนำ",
             uri: "https://miniapp.line.me/2012621103-OpONnNqR",
           },
         }],

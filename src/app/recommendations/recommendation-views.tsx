@@ -6,7 +6,7 @@ import type { AnalysisSummary, SavedAnalysis } from "@/lib/analyses/result";
 import { AnalysisLoader } from "./analysis-loader";
 import { ZoneArtwork } from "./zone-artwork";
 
-const recommendationsPath = "/recommendations";
+const recommendationsPath = "/";
 const historyHref = `${recommendationsPath}?view=history`;
 const dateFormat = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Asia/Bangkok" });
 
@@ -27,13 +27,9 @@ export function RecommendationViews() {
 
   return (
     <>
-      <header className="mt-3 rounded-[2rem] bg-[#163a2f] p-6 text-[#faf8ed] sm:p-9">
-        <h1 className="font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Living zone recommendation</h1>
-      </header>
-
       <nav aria-label="Recommendation views" className="mt-4 grid grid-cols-2 gap-1 rounded-2xl border border-[#dce3d9] bg-white p-1">
         {[
-          { label: "Current", href: recommendationsPath, active: !history },
+          { label: "Latest", href: recommendationsPath, active: !history },
           { label: "Past searches", href: historyHref, active: history },
         ].map(({ label, href, active }) => (
           <Link key={label} href={href} aria-current={active ? "page" : undefined}
@@ -44,8 +40,8 @@ export function RecommendationViews() {
       </nav>
 
       <section className="mt-5" aria-labelledby="recommendation-heading">
-        <h2 id="recommendation-heading" className="font-serif text-3xl tracking-tight">
-          {history ? (resultId === null ? "Past searches" : "Past recommendation") : "Current recommendation"}
+        <h2 id="recommendation-heading" className={history && resultId !== null ? "font-serif text-3xl tracking-tight" : "sr-only"}>
+          {history ? (resultId === null ? "Past searches" : "Past recommendation") : "Latest recommendation"}
         </h2>
         {history && resultId !== null && <Link href={historyHref} className="mt-2 inline-block text-sm underline">Back to past searches</Link>}
         {history && resultId === null ? (
@@ -66,7 +62,10 @@ export function RecommendationViews() {
         ) : (
           <AnalysisLoader<{ analysis: SavedAnalysis | null }> key={query} query={query}>
             {({ analysis }) => analysis ? <AnalysisResults analysis={analysis} history={history} /> : (
-              <p className="mt-3 text-sm text-[#52645a]">You have no completed analysis yet. Request one in the Yoo Nai Dee LINE chat.</p>
+              <div className="rounded-2xl border border-[#dce3d9] bg-white p-5">
+                <p className="font-semibold">No recommendations yet</p>
+                <p className="mt-1 text-sm leading-relaxed text-[#52645a]">Start a search in the Yoo Nai Dee LINE chat. Your recommendations will appear here when the search is complete.</p>
+              </div>
             )}
           </AnalysisLoader>
         )}

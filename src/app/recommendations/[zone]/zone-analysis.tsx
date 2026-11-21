@@ -17,7 +17,7 @@ export function ZoneAnalysis() {
   return (
     <>
       <Link href={{
-        pathname: "/recommendations",
+        pathname: "/",
         query: { ...(result !== null ? { result } : {}), ...(history ? { view: "history" } : {}) },
       }} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#164334] hover:underline">
         <ArrowLeft aria-hidden className="size-4" />

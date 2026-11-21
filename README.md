@@ -1,12 +1,12 @@
 # Yoo Nai Dee (อยู่ไหนดี)
 
-Yoo Nai Dee is a LINE-first hackathon project for people deciding where to live in Bangkok. The bot collects a regular destination, a monthly rent ceiling, a preferred way to get around, and optional lifestyle preferences. The web app compares sample neighborhoods for a destination, stay dates, and a total rent budget.
+Yoo Nai Dee is a LINE-first hackathon project for people deciding where to live in Bangkok. The bot collects a regular destination, a monthly rent ceiling, a preferred way to get around, and optional lifestyle preferences. The web app displays saved neighborhood recommendations.
 
 ## What works today
 
 - **LINE chat** uses the OpenAI Codex SDK to collect preferences in Thai or English. The bot asks for missing details, queues an analysis in PostgreSQL after the user confirms, and sends a **SEARCHING** card.
-- **Web and LINE Mini App** offer sample neighborhood shortlists, prorated sample rent estimates, directions links, and browser-local search history. Signed-in LINE users can view and edit their lifestyle priorities in the profile and reuse their saved destination and budget in the planner.
-- **Background worker** claims analysis jobs and moves them to `WAITING_FOR_HANDLER`. Live neighborhood research and personalized result delivery are planned. The web planner uses fictional property and rent data.
+- **Web and LINE Mini App** open directly to the latest completed recommendations for signed-in LINE users. **Past searches** opens earlier results, and **Your profile** opens saved housing preferences and editable lifestyle priorities.
+- **Background worker** claims analysis jobs and moves them to `WAITING_FOR_HANDLER`. Live neighborhood research and personalized result delivery are planned.
 
 ## Run the web demo
 
@@ -19,7 +19,7 @@ npm ci
 npm run dev
 ```
 
-Open [the stay planner](http://localhost:3000/recommendations?view=update), choose **Fill in an example**, then select **Compare sample areas**. The sample planner runs without a database, LINE credentials, or an OpenAI API key.
+Open [the recommendations home](http://localhost:3000/). Loading saved recommendations and profiles requires the LINE and PostgreSQL setup below.
 
 Use `npm run lint` to run ESLint. Use `npm run build` followed by `npm start` to serve a production build.
 
@@ -58,7 +58,7 @@ Keep database credentials, the LINE channel secret and access token, and the Ope
 
 1. Expose the Next.js server over public HTTPS. Set the Messaging API channel's webhook URL to `https://<your-public-host>/api/line/webhook`, then enable webhooks and redelivery.
 2. Create a LIFF app in a LINE Login channel under the same LINE provider as the Messaging API channel. Set its endpoint to `https://<your-public-host>/`, enable the `openid` and `profile` scopes, and set `NEXT_PUBLIC_LIFF_ID` to its ID.
-3. The button in the **SEARCHING** card uses a fixed Mini App URL. For your own deployment, update the URL in [`src/lib/line/intake-flex.ts`](src/lib/line/intake-flex.ts) to point to your app.
+3. The **ดูคำแนะนำ** button in the **SEARCHING** card opens the Mini App home through a fixed URL. For your own deployment, update the URL in [`src/lib/line/intake-flex.ts`](src/lib/line/intake-flex.ts) to point to your app.
 
 To check intake, send `ทำงานอโศก งบไม่เกิน 15,000 บาทต่อเดือน` to the bot. It should ask for a travel mode. Reply `BTS`, then tap or type `ค้นหา` when prompted. Expect one `ANALYSIS` job and a **SEARCHING** card after confirmation.
 
